@@ -1,0 +1,25 @@
+{
+  "name": "Coastline: Vicio Bay (Godot 4.7.2 + Android)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    }
+  },
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    "ANDROID_HOME": "${containerEnv:HOME}/Android/Sdk",
+    "ANDROID_SDK_ROOT": "${containerEnv:HOME}/Android/Sdk",
+    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+  },
+  "postCreateCommand": "bash tools/setup_codespace.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "geequlim.godot-tools",
+        "redhat.vscode-yaml"
+      ]
+    }
+  }
+}
