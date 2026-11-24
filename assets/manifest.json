@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "description": "Hash-pinned external CC0/CC-BY assets fetched by tools/fetch_assets.py (never commit files >50 MB to git).",
+  "assets": []
+}
