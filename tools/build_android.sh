@@ -15,6 +15,10 @@ GODOT_DIR_VER="${GODOT_DIR_VER:-4.7.2.stable}"
 TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/$GODOT_DIR_VER"
 export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
 export PATH="$JAVA_HOME/bin:$PATH"
+if [ -n "${ANDROID_HOME:-}" ] && [ ! -d "$ANDROID_HOME/platform-tools" ] && [ -d "$HOME/Android/Sdk/platform-tools" ]; then
+  echo "Notice: ANDROID_HOME=$ANDROID_HOME is incomplete; using $HOME/Android/Sdk."
+  ANDROID_HOME="$HOME/Android/Sdk"
+fi
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 
@@ -36,6 +40,12 @@ cleanup() {
   rm -rf "$BACKUP_DIR"
 }
 trap cleanup EXIT
+
+# Keep the generated Gradle project out of Godot's resource filesystem.
+# Without this marker, repeated exports import Android resources and package
+# the previous build's assets, causing duplicate UIDs and invalid .import files.
+mkdir -p android
+touch android/.gdignore
 
 # 1. Ensure Android build template is extracted cleanly
 if [ ! -f "android/.build_version" ] || ! grep -q "$GODOT_DIR_VER" "android/.build_version" 2>/dev/null; then
