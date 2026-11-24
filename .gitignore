@@ -1,0 +1,30 @@
+# Godot 4
+.godot/
+*.translation
+export_presets.cfg.bak
+
+# Android / Gradle / Keystores (NEVER commit secrets or keystores)
+android/
+build/
+*.apk
+*.aab
+*.keystore
+*.jks
+*.idsig
+keystore.properties
+local.properties
+
+# Toolchain / Caches / Temp
+.toolchain/
+tools/.cache/
+assets/downloads/
+/tmp/
+*.tmp
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Screenshots / Render tests
+tests/screenshots/*.png
+!tests/screenshots/.gitkeep
