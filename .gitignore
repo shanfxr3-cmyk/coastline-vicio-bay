@@ -27,4 +27,5 @@ __pycache__/
 
 # Screenshots / Render tests
 tests/screenshots/*.png
+tests/screenshots/*.import
 !tests/screenshots/.gitkeep
