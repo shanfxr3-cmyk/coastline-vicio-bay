@@ -154,6 +154,8 @@ jobs:
             ~/.gradle/wrapper
             .godot
           key: android-gradle-${{ env.GODOT_VER }}-${{ hashFiles('export_presets.cfg', 'project.godot') }}
+          restore-keys: |
+            android-gradle-${{ env.GODOT_VER }}-
 
       - name: Decode release keystore if secrets are configured
         id: keystore
