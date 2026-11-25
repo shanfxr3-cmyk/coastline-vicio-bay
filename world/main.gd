@@ -10,10 +10,7 @@ const EventBusScript := preload("res://core/event_bus.gd")
 const GameStateScript := preload("res://core/game_state.gd")
 const SettingsScript := preload("res://core/settings.gd")
 const StreamingScript := preload("res://world/streaming.gd")
-
-const MOVE_SPEED := 7.2
-const JUMP_VELOCITY := 5.6
-const GRAVITY := 18.0
+const PLAYER_SCENE := preload("res://player/player.tscn")
 
 var _tod_index: int = 0
 var _tod_presets: Array[Dictionary] = [
@@ -65,11 +62,6 @@ var _sun: DirectionalLight3D = null
 var _world_env: WorldEnvironment = null
 var _sky_mat: ProceduralSkyMaterial = null
 var _actor: CharacterBody3D = null
-var _cam_pivot: Node3D = null
-var _camera: Camera3D = null
-var _move_input: Vector2 = Vector2.ZERO
-var _cam_yaw: float = -1.26
-var _cam_pitch: float = -0.05
 var _led_materials: Array[StandardMaterial3D] = []
 var _street_lights: Array[OmniLight3D] = []
 
@@ -82,10 +74,6 @@ func _ready() -> void:
 
 	var eb := get_node_or_null("/root/EventBus") as EventBusScript
 	if eb != null:
-		eb.touch_move_updated.connect(func(v: Vector2) -> void:
-			_move_input = v
-		)
-		eb.touch_look_updated.connect(_on_touch_look)
 		eb.touch_action_triggered.connect(_on_touch_action)
 		eb.quality_preset_changed.connect(_on_quality_changed)
 
@@ -166,6 +154,14 @@ func _build_bayfront_world() -> void:
 	wall_mat.albedo_color = Color(0.68, 0.72, 0.76)
 	wall_mat.roughness = 0.45
 	_add_static_box(city_root, "SeawallCurb", Vector3(260.0, 0.75, 0.45), Vector3(0.0, 0.375, 9.8), wall_mat)
+
+	# Waist-high obstacle near spawn provides a real, repeatable vault route.
+	var vault_mat := StandardMaterial3D.new()
+	vault_mat.albedo_color = Color(0.22, 0.29, 0.34)
+	vault_mat.metallic = 0.55
+	vault_mat.roughness = 0.32
+	_add_static_box(city_root, "VaultPracticeBarrier", Vector3(2.2, 0.85, 0.35), Vector3(-42.0, 0.425, 1.45), vault_mat)
+	_add_mesh_box(city_root, Vector3(2.24, 0.06, 0.38), Vector3(-42.0, 0.82, 1.45), _make_led_material(Color(0.0, 0.83, 1.0)))
 
 	# 3. Wet Asphalt Boulevard (z in [-22, -5])
 	var road_mat := ShaderMaterial.new()
@@ -355,100 +351,23 @@ func _add_mesh_box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -
 
 
 func _build_player_rig() -> void:
-	_actor = CharacterBody3D.new()
+	_actor = PLAYER_SCENE.instantiate() as CharacterBody3D
 	_actor.name = "PlayerPreview"
 	_actor.position = Vector3(-42.0, 0.1, 3.2)
-	_actor.rotation.y = -1.26
+	_actor.rotation.y = 0.0
 	add_child(_actor)
 
-	var col := CollisionShape3D.new()
-	var cap := CapsuleShape3D.new()
-	cap.radius = 0.38
-	cap.height = 1.75
-	col.shape = cap
-	col.position = Vector3(0.0, 0.875, 0.0)
-	_actor.add_child(col)
 
-	var body_mesh := MeshInstance3D.new()
-	var cm := CapsuleMesh.new()
-	cm.radius = 0.36
-	cm.height = 1.72
-	body_mesh.mesh = cm
-	body_mesh.position = Vector3(0.0, 0.875, 0.0)
-	var suit_mat := StandardMaterial3D.new()
-	suit_mat.albedo_color = Color(0.11, 0.14, 0.18)
-	suit_mat.roughness = 0.55
-	body_mesh.material_override = suit_mat
-	_actor.add_child(body_mesh)
-
-	# Forward visor strip so facing direction is clearly readable
-	var visor := MeshInstance3D.new()
-	var vm := BoxMesh.new()
-	vm.size = Vector3(0.42, 0.14, 0.22)
-	visor.mesh = vm
-	visor.position = Vector3(0.0, 1.48, -0.28)
-	visor.material_override = _make_led_material(Color(0.0, 0.83, 1.0))
-	_actor.add_child(visor)
-
-	_cam_pivot = Node3D.new()
-	_cam_pivot.name = "CameraPivot"
-	_cam_pivot.position = Vector3(0.0, 1.55, 0.0)
-	_actor.add_child(_cam_pivot)
-
-	_camera = Camera3D.new()
-	_camera.name = "MainCamera"
-	_camera.fov = 62.0
-	_camera.far = 650.0
-	_camera.position = Vector3(0.45, 0.65, 5.2)
-	_camera.current = true
-	_cam_pivot.add_child(_camera)
-	_update_camera_rig()
-
-
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	if _actor == null:
 		return
-
-	if not _actor.is_on_floor():
-		_actor.velocity.y -= GRAVITY * delta
-
-	var cam_basis: Basis = Basis(Vector3.UP, _cam_yaw)
-	var forward: Vector3 = -cam_basis.z
-	var right: Vector3 = cam_basis.x
-	var wish_dir: Vector3 = (right * _move_input.x) + (forward * -_move_input.y)
-	if wish_dir.length() > 1.0:
-		wish_dir = wish_dir.normalized()
-
-	_actor.velocity.x = lerpf(_actor.velocity.x, wish_dir.x * MOVE_SPEED, clampf(delta * 10.0, 0.0, 1.0))
-	_actor.velocity.z = lerpf(_actor.velocity.z, wish_dir.z * MOVE_SPEED, clampf(delta * 10.0, 0.0, 1.0))
-	_actor.move_and_slide()
-
-	if wish_dir.length() > 0.08:
-		var target_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
-		_actor.rotation.y = lerp_angle(_actor.rotation.y, target_yaw, clampf(delta * 12.0, 0.0, 1.0))
-		_update_camera_rig()
-
 	var stream := get_node_or_null("/root/Streaming") as StreamingScript
 	if stream != null:
 		stream.update_focus_position(_actor.global_position)
 
 
-func _on_touch_look(look_delta: Vector2) -> void:
-	_cam_yaw -= look_delta.x
-	_cam_pitch = clampf(_cam_pitch - look_delta.y, -0.85, 0.35)
-	_update_camera_rig()
-
-
-func _update_camera_rig() -> void:
-	if _cam_pivot == null or _actor == null:
-		return
-	_cam_pivot.global_rotation = Vector3(_cam_pitch, _cam_yaw, 0.0)
-
-
 func _on_touch_action(action_name: String) -> void:
-	if action_name == "jump" and _actor != null and _actor.is_on_floor():
-		_actor.velocity.y = JUMP_VELOCITY
-	elif action_name == "cycle_tod":
+	if action_name == "cycle_tod":
 		_tod_index = (_tod_index + 1) % _tod_presets.size()
 		_apply_tod(_tod_index)
 

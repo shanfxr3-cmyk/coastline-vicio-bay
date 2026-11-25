@@ -6,8 +6,8 @@
 
 | Phase | Name | Status | Target |
 |---|---|---|---|
-| **P0** | Build Pipeline, Skeleton, Touch Demo, CI (STANDARD / ULTRA / AAB) | `AWAITING USER QA` | CI green; signing secrets + phone sign-off pending |
-| **P1** | Character Controller, Camera, Touch Controls | `PENDING` | On-foot locomotion + camera rig |
+| **P0** | Build Pipeline, Skeleton, Touch Demo, CI (STANDARD / ULTRA / AAB) | `PHONE ACCEPTED` | User approved on Android; release CI verification carried forward |
+| **P1** | Character Controller, Camera, Touch Controls | `IN PROGRESS` | On-foot locomotion + camera rig |
 | **P2** | Sky, Clouds, Weather, Time of Day, Lighting | `PENDING` | 24h cycle, volumetric clouds, rain/wetness |
 | **P3** | District 1 (Bayfront / Palm Row), Road System, Chunk Streaming | `PENDING` | 128m threaded streaming chunks + roads |
 | **P4** | Supercars, Traffic, Driving Feel | `PENDING` | Raycast RigidBody3D physics + hero cars |
@@ -41,8 +41,8 @@
 - [x] `P0.8` Local `tools/validate.sh` pass + visual inspection of local STANDARD/ULTRA screenshots + local Android APK builds
 - [x] `P0.9` `.github/workflows/build.yml` (STANDARD APK, ULTRA APK, AAB, release-signing support, cached Godot/templates/Gradle/imported resources) + keystore setup instructions in `README.md`; local release-signed AAB verified
 - [x] `P0.10` Push to `dev`, `gh run watch` green CI for STANDARD, ULTRA, and AAB, update docs, commit & verification report
-- [ ] `P0.11` **User secrets step:** add `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_ALIAS`, and `ANDROID_KEYSTORE_PASSWORD`, rerun `dev` CI, and confirm release-signed artifacts (current run is explicitly debug-signed)
-- [ ] `P0.12` **User phone step:** install STANDARD APK on a physical arm64 Android phone; verify launch, lit scene, joystick movement, swipe orbit, JUMP, TOD, QUAL, and DBG; then test ULTRA on a capable flagship and record results
+- [ ] `P0.11` User confirmed all three signing secrets were added on 2026-11-25; verify the next pushed CI run logs `Using release signing keystore` and validate its release-signed artifacts
+- [x] `P0.12` User installed the STANDARD APK on a physical Android phone, reported that it “runs very good,” and explicitly approved starting Phase 1 on 2026-11-25; expanded Phase 1 controls will receive a fresh device check
 
 ### Verification Report — 2026-11-24
 - **Local validation:** `bash tools/validate.sh` passed: 10 scripts, seven autoloads, Jolt Physics, 25 chunks, seven audio buses.
@@ -54,21 +54,38 @@
 - **Device status:** No physical phone is attached, so launch, touch, FPS, thermals, and driver compatibility remain unverified (`L-005`). There are no open code/build P0 blockers.
 
 ### Exact Next Steps
-1. Signing material for this handoff is outside the repo in `/tmp/opencode/coastline-release-signing/`: `ANDROID_KEYSTORE_BASE64.txt`, `alias.txt` (`coastline_release`), and `password.txt`. Add those values as GitHub Actions repository secrets using `README.md`; never commit or paste them into chat. Back up the keystore securely. If temporary files disappear, generate a new key only if no prior upload key needs preserving.
-2. After saving secrets, run `gh workflow run build.yml --ref dev`, identify the new run with `gh run list --branch dev --limit 1`, then `gh run watch <new-run-id> --exit-status`. Confirm logs say `Using release signing keystore` before marking `P0.11` complete.
-3. Complete `P0.12` from the STANDARD artifact at the green run above. Record pass/fail results here. Only after `P0.11` and `P0.12` pass, change P0 to `DONE` and begin P1; otherwise fix the reported issue first.
+1. The user has added all signing secrets. The integration token cannot call workflow dispatch (HTTP 403), so the next Phase 1 push will trigger CI; inspect its build log for `Using release signing keystore`, then mark `P0.11` complete.
+2. Physical STANDARD APK launch/operation is accepted by the user. Do not request another Phase 0 installation; request only the expanded Phase 1 control/ULTRA check when the new APK is ready.
+3. Continue from the active Phase 1 checklist below. Current code compiles and all eight character/camera physics tests pass; the vault edge-collision defect was fixed with a longer validated landing distance.
 
 ### Definition of Done (Every Phase)
 1. **PASS:** `bash tools/validate.sh` passes locally and in CI (import, `--check-only` on all `.gd`, headless boot test).
 2. **PASS WITH `B-003`:** Screenshots render under Xvfb/Lavapipe and local visuals were inspected; the latest CI PNG passed integrity/dimension checks. The P2 shutdown warning remains open.
 3. **PASS:** GitHub Actions CI builds STANDARD APK, ULTRA APK, and AAB cleanly (`gh run watch 45389714024 --exit-status`).
-4. **PENDING:** Physical-phone QA and release-secret rerun (`P0.11`/`P0.12`); no open code/build P0 blocker.
+4. **PHONE ACCEPTED / SIGNING CI PENDING:** User approved the Android build on 2026-11-25; secrets are added and the next pushed run must confirm release signing (`P0.11`).
 5. **PASS:** `docs/ROADMAP.md`, `docs/CHANGELOG.md`, `CREDITS.md`, and `docs/LIMITS.md` reconciled with verified results on `dev`.
 
 ---
 
-## Next Up After P0: Phase 1 — Character Controller, Camera, Touch Controls
-- Implement dual-protagonist base rig & procedural character mesh/capsule placeholder upgrade
-- Third-person spring-arm camera with collision avoidance, smooth damping, and touch swipe orbit
-- On-foot locomotion state machine (idle, walk, sprint, jump, vault, crouch) using Jolt `CharacterBody3D`
-- Touch-first HUD refinement (dynamic virtual thumbstick, sprint lock, jump/vault contextual button, gamepad parity)
+## Active Phase: P1 — Character Controller, Camera, Touch Controls
+
+### Checklist
+- [x] `P1.1` Modular `player/player.tscn` + `player/player_controller.gd` using Jolt `CharacterBody3D`; old capsule/controller code removed from `world/main.gd`
+- [x] `P1.2` Two original switchable protagonists, Kian Cross and Sera Vale, with distinct materials and articulated procedural rigs (`player/protagonist_visual.gd`)
+- [x] `P1.3` Camera-relative idle/walk/sprint/crouch/jump/fall/vault states, acceleration/deceleration, coyote time, jump buffering, crouch clearance, and real ray-checked vault traversal
+- [x] `P1.4` Independent smoothed third-person `SpringArm3D` camera with sphere collision, player exclusion, yaw/pitch limits, and target reset (`player/third_person_camera.gd`)
+- [x] `P1.5` Dynamic touch thumbstick, swipe orbit, sprint lock, crouch/stand, protagonist switch, and contextual JUMP/VAULT HUD
+- [x] `P1.6` Keyboard and gamepad parity: WASD/arrows + left stick, mouse/right-stick camera, Space/A action, C/B crouch, Tab/Y switch, Shift/left-stick sprint
+- [x] `P1.7` `tests/player_test.gd`: walk, sprint, crouch, jump, vault completion, protagonist switching, camera obstruction, and standing-clearance regressions; all eight checks pass
+- [ ] `P1.8` STANDARD and ULTRA screenshots generated; fresh visual/device review pending because this session has no image-viewing capability. Nonfatal probe shutdown warning remains `B-003`
+- [ ] `P1.9` Final local validation/Android builds, release-signed green CI, docs, and user Phase 1 phone QA
+
+### Resume Steps After Interruption
+1. Run `bash tools/validate.sh`; expected `PLAYER_TEST_PASS` covers eight checks. If vault regresses, reproduce near `VaultPracticeBarrier` at `(-42, 0.425, 1.45)` and keep collision enabled.
+2. Review `git diff`, then commit/push the Phase 1 implementation. Inspect the new CI run for release signing to close `P0.11` and confirm all three Android artifacts plus both Phase 1 screenshots.
+3. Build/test Android locally, reconcile CHANGELOG/LIMITS/BUGS/README, and request one Phase 1 phone check for movement, sprint, crouch, vault, switching, camera collision, and ULTRA compatibility.
+
+## Next Up After P1: Phase 2 — Sky, Clouds, Weather, Time of Day, Lighting
+- Full 24-hour sun/moon cycle and renderer-aware atmospheric lighting
+- Custom raymarched cloud sky with half/quarter-resolution fallback
+- Rain, storms, wetness/puddles, wind, and per-weather grading

@@ -21,8 +21,14 @@ var _move_vector: Vector2 = Vector2.ZERO
 var _tod_button: Button = null
 var _quality_button: Button = null
 var _debug_button: Button = null
+var _switch_button: Button = null
+var _sprint_button: Button = null
+var _crouch_button: Button = null
 var _jump_button: Button = null
 var _district_label: Label = null
+var _status_label: Label = null
+var _protagonist_name: String = "KIAN"
+var _state_name: String = "IDLE"
 
 
 func _eb() -> EventBusScript:
@@ -46,6 +52,11 @@ func _ready() -> void:
 	if eb != null:
 		eb.quality_preset_changed.connect(_on_quality_changed)
 		eb.time_of_day_changed.connect(_on_tod_changed)
+		eb.locomotion_state_changed.connect(_on_locomotion_state_changed)
+		eb.vault_context_changed.connect(_on_vault_context_changed)
+		eb.sprint_lock_changed.connect(_on_sprint_lock_changed)
+		eb.crouch_changed.connect(_on_crouch_changed)
+		eb.protagonist_changed.connect(_on_protagonist_changed)
 
 
 func _update_stick_home() -> void:
@@ -63,7 +74,7 @@ func _build_hud() -> void:
 	top_bar.anchor_right = 1.0
 	top_bar.anchor_top = 0.0
 	top_bar.anchor_bottom = 0.0
-	top_bar.offset_left = -430.0
+	top_bar.offset_left = -610.0
 	top_bar.offset_right = -16.0
 	top_bar.offset_top = 14.0
 	top_bar.offset_bottom = 58.0
@@ -71,11 +82,15 @@ func _build_hud() -> void:
 	top_bar.add_theme_constant_override("separation", 8)
 	add_child(top_bar)
 
+	_switch_button = _make_pill_button("KIAN")
+	_switch_button.pressed.connect(func() -> void:
+		_emit_action("switch_protagonist")
+	)
+	top_bar.add_child(_switch_button)
+
 	_tod_button = _make_pill_button("TOD: GOLDEN")
 	_tod_button.pressed.connect(func() -> void:
-		var eb := _eb()
-		if eb != null:
-			eb.touch_action_triggered.emit("cycle_tod")
+		_emit_action("cycle_tod")
 	)
 	top_bar.add_child(_tod_button)
 
@@ -109,21 +124,60 @@ func _build_hud() -> void:
 	_district_label.add_theme_color_override("font_color", Color(0.84, 0.93, 0.98, 0.85))
 	add_child(_district_label)
 
+	_sprint_button = _make_pill_button("SPRINT")
+	_sprint_button.anchor_top = 1.0
+	_sprint_button.anchor_bottom = 1.0
+	_sprint_button.offset_left = 32.0
+	_sprint_button.offset_right = 164.0
+	_sprint_button.offset_top = -258.0
+	_sprint_button.offset_bottom = -202.0
+	_sprint_button.pressed.connect(func() -> void:
+		_emit_action("toggle_sprint")
+	)
+	add_child(_sprint_button)
+
+	_crouch_button = _make_pill_button("CROUCH")
+	_crouch_button.anchor_left = 1.0
+	_crouch_button.anchor_right = 1.0
+	_crouch_button.anchor_top = 1.0
+	_crouch_button.anchor_bottom = 1.0
+	_crouch_button.offset_left = -318.0
+	_crouch_button.offset_right = -184.0
+	_crouch_button.offset_top = -132.0
+	_crouch_button.offset_bottom = -58.0
+	_crouch_button.pressed.connect(func() -> void:
+		_emit_action("toggle_crouch")
+	)
+	add_child(_crouch_button)
+
 	_jump_button = _make_pill_button("JUMP")
 	_jump_button.anchor_left = 1.0
 	_jump_button.anchor_right = 1.0
 	_jump_button.anchor_top = 1.0
 	_jump_button.anchor_bottom = 1.0
-	_jump_button.offset_left = -156.0
+	_jump_button.offset_left = -166.0
 	_jump_button.offset_right = -34.0
 	_jump_button.offset_top = -132.0
 	_jump_button.offset_bottom = -58.0
 	_jump_button.pressed.connect(func() -> void:
-		var eb := _eb()
-		if eb != null:
-			eb.touch_action_triggered.emit("jump")
+		_emit_action("primary_action")
 	)
 	add_child(_jump_button)
+
+	_status_label = Label.new()
+	_status_label.anchor_left = 0.5
+	_status_label.anchor_right = 0.5
+	_status_label.anchor_top = 1.0
+	_status_label.anchor_bottom = 1.0
+	_status_label.offset_left = -180.0
+	_status_label.offset_right = 180.0
+	_status_label.offset_top = -48.0
+	_status_label.offset_bottom = -20.0
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.add_theme_font_size_override("font_size", 14)
+	_status_label.add_theme_color_override("font_color", Color(0.88, 0.95, 1.0, 0.90))
+	add_child(_status_label)
+	_update_status()
 
 
 func _make_pill_button(title: String) -> Button:
@@ -188,7 +242,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _is_over_button(pos: Vector2) -> bool:
-	for btn: Button in [_tod_button, _quality_button, _debug_button, _jump_button]:
+	for btn: Button in [_switch_button, _tod_button, _quality_button, _debug_button, _sprint_button, _crouch_button, _jump_button]:
 		if btn != null and btn.visible and btn.get_global_rect().has_point(pos):
 			return true
 	return false
@@ -207,32 +261,6 @@ func _update_stick(touch_pos: Vector2) -> void:
 	queue_redraw()
 
 
-func _process(_delta: float) -> void:
-	var eb := _eb()
-	if _stick_touch_id == -1:
-		var key_vec := Vector2.ZERO
-		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-			key_vec.x -= 1.0
-		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-			key_vec.x += 1.0
-		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
-			key_vec.y -= 1.0
-		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
-			key_vec.y += 1.0
-		if key_vec.length() > 1.0:
-			key_vec = key_vec.normalized()
-		if key_vec != _move_vector:
-			_move_vector = key_vec
-			_stick_knob = _stick_origin + _move_vector * (STICK_RADIUS * 0.7)
-			if eb != null:
-				eb.touch_move_updated.emit(_move_vector)
-			queue_redraw()
-
-	if Input.is_action_just_pressed("ui_accept"):
-		if eb != null:
-			eb.touch_action_triggered.emit("jump")
-
-
 func _draw() -> void:
 	draw_circle(_stick_origin, STICK_RADIUS, Color(0.05, 0.11, 0.18, 0.36))
 	draw_arc(_stick_origin, STICK_RADIUS, 0.0, TAU, 48, Color(0.0, 0.83, 1.0, 0.48), 2.0, true)
@@ -248,3 +276,41 @@ func _on_quality_changed(preset_name: String) -> void:
 func _on_tod_changed(phase_name: String, _elevation: float) -> void:
 	if _tod_button != null:
 		_tod_button.text = "TOD: %s" % phase_name.to_upper()
+
+
+func _emit_action(action_name: String) -> void:
+	var eb := _eb()
+	if eb != null:
+		eb.touch_action_triggered.emit(action_name)
+
+
+func _on_locomotion_state_changed(state_name: String) -> void:
+	_state_name = state_name
+	_update_status()
+
+
+func _on_vault_context_changed(available: bool) -> void:
+	if _jump_button != null:
+		_jump_button.text = "VAULT" if available else "JUMP"
+
+
+func _on_sprint_lock_changed(active: bool) -> void:
+	if _sprint_button != null:
+		_sprint_button.text = "SPRINT ON" if active else "SPRINT"
+
+
+func _on_crouch_changed(active: bool) -> void:
+	if _crouch_button != null:
+		_crouch_button.text = "STAND" if active else "CROUCH"
+
+
+func _on_protagonist_changed(_protagonist_id: String, display_name: String) -> void:
+	_protagonist_name = display_name.split(" ")[0].to_upper()
+	if _switch_button != null:
+		_switch_button.text = _protagonist_name
+	_update_status()
+
+
+func _update_status() -> void:
+	if _status_label != null:
+		_status_label.text = "%s  |  %s" % [_protagonist_name, _state_name]

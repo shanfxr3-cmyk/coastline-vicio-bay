@@ -126,7 +126,8 @@ func _refresh_text() -> void:
 		+ "FPS: %.1f (%.2f ms)  |  Calls: %d  |  Tris: %d\n"
 		+ "VRAM: %.1f MB  |  RAM: %.1f MB\n"
 		+ "Stream: chunk (%d,%d) loaded=%d queue=%d\n"
-		+ "Physics (%s): active=%d  |  TOD: %s"
+		+ "Physics (%s): active=%d  |  TOD: %s\n"
+		+ "Hero: %s  |  State: %s"
 	) % [
 		title,
 		tier,
@@ -146,11 +147,14 @@ func _refresh_text() -> void:
 		phys_engine,
 		phys_objs,
 		tod,
+		gs.active_protagonist_id if gs != null else "kian",
+		gs.locomotion_state if gs != null else "IDLE",
 	]
 
 
 func _capture_and_quit() -> void:
 	await RenderingServer.frame_post_draw
+	var exit_code: int = 0
 	var img: Image = get_viewport().get_texture().get_image()
 	if img != null:
 		var abs_path: String = _screenshot_path
@@ -159,4 +163,15 @@ func _capture_and_quit() -> void:
 		var err: Error = img.save_png(abs_path)
 		if err != OK:
 			push_error("Failed to save screenshot to %s (err=%d)" % [abs_path, err])
-	get_tree().quit(0)
+			exit_code = 1
+	else:
+		exit_code = 1
+	img = null
+	# Free scene-owned sky/reflection textures before RenderingServer finalizes,
+	# then leave enough idle frames for deferred GPU releases to drain.
+	var scene := get_tree().current_scene
+	if scene != null:
+		scene.queue_free()
+	for _frame: int in range(8):
+		await get_tree().process_frame
+	get_tree().quit(exit_code)

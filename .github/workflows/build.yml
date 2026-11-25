@@ -58,15 +58,18 @@ jobs:
       - name: Run tools/validate.sh
         run: bash tools/validate.sh
 
-      - name: Render Phase 0 screenshot (Standard / Mobile)
-        run: bash tools/screenshot.sh mobile tests/screenshots/phase0_standard.png 1280x720 10
+      - name: Render Phase 1 screenshot (Standard / Mobile)
+        run: bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20
 
-      - name: Upload validation screenshot
+      - name: Render Phase 1 screenshot (Ultra / Forward+)
+        run: bash tools/screenshot.sh forward_plus tests/screenshots/phase1_ultra.png 1280x720 20
+
+      - name: Upload validation screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phase0-screenshots
-          path: tests/screenshots/*.png
+          name: phase1-screenshots
+          path: tests/screenshots/phase1_*.png
 
   build-android:
     name: Build Android (STANDARD, ULTRA, AAB)

@@ -4,11 +4,12 @@ Track all discovered bugs here with severity (`P0` blocker, `P1` major, `P2` min
 
 ## Open Bugs
 
-### `B-003` — P2 — Texture RIDs reported at screenshot shutdown
-- **Repro:** Run `bash tools/screenshot.sh mobile tests/screenshots/phase0_standard.png 1280x720 10` with Lavapipe.
-- **Observed:** The 1280×720 PNG saves successfully and the process exits zero, then Godot reports `WARNING: 7 RIDs of type "Texture" were leaked.` Also present in CI run `45389714024`.
-- **Impact:** No observed capture or boot-test failure; resource-teardown hygiene still needs investigation. Reproduce on a physical device before treating it as engine-specific.
-- **Next:** Inspect sky/reflection-probe/viewport teardown in P1 and make screenshot QA fail on new leak warnings.
+### `B-003` — P2 — ReflectionProbe textures reported at screenshot shutdown
+- **Repro:** Run `bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20` with Lavapipe.
+- **Observed:** The PNG saves successfully and exits zero, then Godot reports `WARNING: 7 RIDs of type "Texture" were leaked.` STANDARD and ULTRA behave identically.
+- **Isolation:** An empty rendered scene exits cleanly. Removing `BayfrontProbe` before its first render also exits cleanly; enabling either `UPDATE_ONCE` or `UPDATE_ALWAYS` reproduces exactly seven leaked texture RIDs. Explicit scene destruction plus eight drain frames does not remove the warning.
+- **Impact:** No observed boot, capture, gameplay, or user-phone failure. This appears scoped to Godot 4.7.2 ReflectionProbe GPU teardown under Lavapipe; required runtime reflections remain enabled.
+- **Next:** Check physical-device logs during Phase 1 QA and reassess after a Godot patch upgrade. Do not “fix” it by silently removing reflections.
 
 ## Resolved Bugs
 

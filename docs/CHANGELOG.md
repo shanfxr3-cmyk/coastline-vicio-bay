@@ -2,7 +2,17 @@
 
 All notable changes to the project are documented in this file.
 
-## [Unreleased] — Phase 0 (Awaiting Phone QA & CI Signing Secrets)
+## [Unreleased] — Phase 1 (In Progress)
+- Added modular Jolt `CharacterBody3D` locomotion with idle, walk, sprint, crouch, jump, fall, and collision-tested vault states.
+- Added switchable original protagonists Kian Cross and Sera Vale with articulated procedural rigs and distinct materials.
+- Added smoothed `SpringArm3D` third-person camera collision, touch/mouse/right-stick orbit, and keyboard/gamepad parity.
+- Expanded the touch HUD with sprint lock, crouch/stand, protagonist switching, and contextual JUMP/VAULT feedback.
+- Added eight physics-level character/camera regression checks and dual-renderer Phase 1 screenshot CI.
+- Fixed vault landing on the barrier edge by extending the validated traversal distance; removed duplicate legacy HUD keyboard input.
+- Isolated the nonfatal seven-texture shutdown warning to `ReflectionProbe` rendering under Godot 4.7.2/Lavapipe (`B-003`).
+- User approved Phase 0 on a physical Android phone and added the release-signing secrets on 2026-11-25.
+
+## [Unreleased] — Phase 0 (Phone Accepted / Signing CI Pending)
 
 ### Added
 - Studio governance, original art direction, roadmap, limits, bug/debt logs, and reproducible Codespace/devcontainer setup.

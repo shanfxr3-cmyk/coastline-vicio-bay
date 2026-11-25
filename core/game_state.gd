@@ -9,11 +9,12 @@ enum Mode {
 }
 
 const GAME_TITLE := "Coastline: Vicio Bay"
-const VERSION_TAG := "0.1.0-p0"
+const VERSION_TAG := "0.2.0-p1"
 
 var mode: Mode = Mode.BOOT
 var active_district: String = "Bayfront Promenade"
-var active_protagonist_id: String = "protagonist_a"
+var active_protagonist_id: String = "kian"
+var locomotion_state: String = "IDLE"
 var session_elapsed_sec: float = 0.0
 var time_of_day_phase: String = "Golden Hour"
 
