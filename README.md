@@ -1,16 +1,17 @@
 # Coastline: Vicio Bay
 
-Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 CI is green; physical-phone QA and CI release-signing secrets are still pending.
+Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 is approved on a physical phone. Phase 1 adds dual protagonists, full on-foot locomotion, and a collision-aware third-person camera; its fresh device QA is pending.
 
 ## Reproduce the toolchain
 
 ```bash
 bash tools/setup_codespace.sh
 bash tools/validate.sh
-bash tools/screenshot.sh mobile tests/screenshots/phase0_standard.png 1280x720 10
+bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20
+bash tools/screenshot.sh forward_plus tests/screenshots/phase1_ultra.png 1280x720 20
 ```
 
-The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Validation checks repository hygiene, the asset manifest, every GDScript file, and a headless boot of all seven autoloads and the main scene.
+The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Validation checks repository hygiene, the asset manifest, every GDScript file, a headless boot of all seven autoloads and the main scene, plus eight character/camera physics regressions.
 
 ## Build Android artifacts
 
@@ -27,15 +28,27 @@ bash tools/build_android.sh standard aab build/coastline-vicio-bay.aab
 
 For a locally signed release AAB, provide `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_ALIAS`, and `RELEASE_KEYSTORE_PASSWORD`, then run the AAB command. The script restores all temporary project/export-setting changes on exit.
 
+## Controls
+
+| Action | Touch | Keyboard | Gamepad |
+|---|---|---|---|
+| Move | Left thumbstick | WASD / arrows | Left stick |
+| Orbit camera | Drag right side | Mouse | Right stick |
+| Sprint | **SPRINT** lock | Shift | Press left stick |
+| Crouch / stand | **CROUCH** | C | B |
+| Jump / vault | **JUMP** / **VAULT** | Space | A |
+| Switch protagonist | **KIAN / SERA** | Tab | Y |
+
 ## Install and test on a phone
 
 1. Open the latest successful **Build & Validate** run in GitHub Actions and download `coastline-standard-apk`.
 2. Extract the ZIP, transfer the APK to the phone, and allow installation from the browser/file manager when Android prompts.
-3. Launch **Coastline: Vicio Bay** and verify the lit Bayfront scene.
-4. Drag the left stick to move, swipe the right side to orbit, and tap **JUMP**.
-5. Tap **TOD**, **QUAL**, and **DBG** to verify lighting presets, quality switching, and telemetry.
+3. Launch **Coastline: Vicio Bay** and verify the lit Bayfront scene and articulated protagonist.
+4. Test the left stick, right-side camera drag, **SPRINT**, **CROUCH**, and **JUMP**. Walk toward the low practice barrier and tap **VAULT** when it appears.
+5. Tap **KIAN / SERA** to switch protagonists. Walk toward a wall while orbiting to confirm the camera pulls in without clipping.
+6. Tap **TOD**, **QUAL**, and **DBG** to verify lighting presets, quality switching, and telemetry. On a flagship Vulkan phone, repeat the launch/control check with `coastline-ultra-apk`.
 
-Report any launch failure, black screen, touch problem, or renderer-specific issue before Phase 0 sign-off. Performance and thermal claims require a physical device; Lavapipe screenshots are not a phone benchmark.
+Report any launch failure, black screen, touch problem, clipping, or renderer-specific issue before Phase 1 sign-off. Performance and thermal claims require a physical device; Lavapipe screenshots are not a phone benchmark.
 
 ## Configure CI release signing
 
