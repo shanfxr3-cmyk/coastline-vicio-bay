@@ -23,3 +23,14 @@ Track all discovered bugs here with severity (`P0` blocker, `P1` major, `P2` min
 - **Observed:** The environment supplied `ANDROID_HOME=/Android/Sdk`, while the installed SDK was under `$HOME/Android/Sdk`; exports reported missing platform/build tools.
 - **Fix:** The builder falls back to `$HOME/Android/Sdk` only when the inherited path lacks `platform-tools` and the local SDK is complete.
 - **Verified:** All local APK/AAB exports and APK signature/AAB archive checks pass without manual environment overrides (`f30d84a`).
+
+### `B-004` — P1 — Version changes missed the Gradle cache and hit Maven rate limits
+- **Repro:** CI run `45539603043` changed `project.godot`/`export_presets.cfg`, missed the exact Gradle cache key, then received HTTP 429 from Maven Central while resolving Android dependencies.
+- **Impact:** Validation and both screenshots passed, but the STANDARD build stopped before ULTRA/AAB; this was not a source, signing, or export failure.
+- **Fix:** `83744f3` adds a Godot-version Gradle `restore-keys` fallback while retaining exact project/export keys for new cache entries.
+- **Verified:** Runs `45542953786` and `45548311788` restored the previous Gradle cache and completed all three release-signed builds without HTTP 429.
+
+### `B-005` — P1 — Local tooling and test scripts were included in Android exports
+- **Observed:** Release-artifact inspection found `assets/opencode.json` and compiled boot/player test scripts in the AAB because Godot's `all_resources` export includes JSON/GDScript resources.
+- **Fix:** `815445e` excludes `opencode.json`, `tests/*`, `tools/*`, and `docs/*` in both Android presets; runtime `assets/manifest.json` remains included.
+- **Verified:** A local AAB content assertion passed, and every APK/AAB downloaded from run `45548311788` has valid CRCs with no `opencode.json` or test-script entries.

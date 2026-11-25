@@ -2,7 +2,7 @@
 
 All notable changes to the project are documented in this file.
 
-## [Unreleased] — Phase 1 (In Progress)
+## [Unreleased] — Phase 1 (Awaiting Phone QA)
 - Added modular Jolt `CharacterBody3D` locomotion with idle, walk, sprint, crouch, jump, fall, and collision-tested vault states.
 - Added switchable original protagonists Kian Cross and Sera Vale with articulated procedural rigs and distinct materials.
 - Added smoothed `SpringArm3D` third-person camera collision, touch/mouse/right-stick orbit, and keyboard/gamepad parity.
@@ -11,8 +11,13 @@ All notable changes to the project are documented in this file.
 - Fixed vault landing on the barrier edge by extending the validated traversal distance; removed duplicate legacy HUD keyboard input.
 - Isolated the nonfatal seven-texture shutdown warning to `ReflectionProbe` rendering under Godot 4.7.2/Lavapipe (`B-003`).
 - User approved Phase 0 on a physical Android phone and added the release-signing secrets on 2026-11-25.
+- Fixed Gradle fallback restoration across project/version changes after Maven Central HTTP 429 (`B-004`).
+- Excluded local agent configuration and test-only scripts from shipping Android exports (`B-005`).
+- Green CI run `45548311788` produced release-signed STANDARD APK (`74648792` bytes), ULTRA APK (`74648808` bytes), and AAB (`26618900` bytes).
+- Downloaded APKs passed v2 release-signature and arm64/package checks; the AAB passed JAR/ZIP verification, bundletool validation, and universal-APK conversion.
+- Both 1280×720 CI screenshots passed integrity/nonblank checks; fresh visual and physical-device Phase 1 QA remain pending.
 
-## [Unreleased] — Phase 0 (Phone Accepted / Signing CI Pending)
+## [Unreleased] — Phase 0 (Complete)
 
 ### Added
 - Studio governance, original art direction, roadmap, limits, bug/debt logs, and reproducible Codespace/devcontainer setup.
@@ -31,4 +36,4 @@ All notable changes to the project are documented in this file.
 - Local validation: 10 GDScript files, seven autoloads, Jolt, 25 streaming chunks, and seven audio buses.
 - Local sequential STANDARD APK, ULTRA APK, debug AAB, and separate release-signed AAB builds; APK signatures and AAB archives checked.
 - GitHub Actions run `45389714024`: both jobs green; STANDARD APK, ULTRA APK, AAB, and screenshot artifacts uploaded, downloaded, and technically verified.
-- Physical-phone launch/touch/performance QA and release-signed CI rerun remain pending; current CI artifacts are debug-signed.
+- The initial run's artifacts were debug-signed. The user subsequently accepted Phase 0 on a physical Android phone, and run `45548311788` superseded them with verified release-signed artifacts.
