@@ -100,7 +100,7 @@
 - [x] `P2.4` Add deterministic preset CLI selection, actual render-scale telemetry, and a structural performance suite to all seven validation stages
 - [x] `P2.5` Add original quarter-resolution procedural sky/cloud/sun/star shading with tiered radiance and no time-driven reflection rebuild loop
 - [x] `P2.6` Render final LOW/HIGH STANDARD and HIGH ULTRA screenshots under Lavapipe; LOW improved from 4 to 15 FPS and HIGH from 2 to 3 FPS at 1280×720. These are software-render comparisons, not phone FPS claims
-- [ ] `P2.7` Build version `0.3.0-p2`/versionCode 2 as STANDARD, ULTRA, and AAB; push green release CI and verify downloadable artifacts
+- [x] `P2.7` Built version `0.3.0-p2`/versionCode 2 as STANDARD, ULTRA, and AAB; green release CI run `45742203868` and downloaded-artifact verification passed
 - [ ] `P2.8` Obtain physical-phone LOW/MEDIUM/HIGH FPS and visual results; iterate until the performance defect has measured improvement
 - [ ] `P2.9` Full continuous 24-hour sun/moon cycle with renderer-aware atmospheric lighting and smooth phase interpolation
 - [ ] `P2.10` Layered volumetric cloud raymarch, scattering/silver lining, aerial perspective, and quality fallbacks beyond the current procedural cloud foundation
@@ -116,10 +116,11 @@
 | Phase 2 HIGH / ULTRA | 1 | 215 | 17,746 | 0.850 | 2048 |
 
 - Final local PNGs passed integrity, 1280×720 dimension, and nonblank pixel-statistic checks. Fresh image viewing remains unavailable; CI must repeat all three captures.
-- Sequential local Android builds passed: STANDARD APK `80285766` bytes, ULTRA APK `80285790` bytes, and AAB `28380094` bytes. Both debug APKs passed v2 signature checks and report versionCode 2/version `0.3.0-p2`; all archives passed CRC/content checks. The debug AAB passed bundletool validation and universal-APK generation. Release signing remains a CI check.
+- Sequential local Android builds passed: STANDARD APK `80285766` bytes, ULTRA APK `80285790` bytes, and AAB `28380094` bytes. Both debug APKs passed v2 signature checks and report versionCode 2/version `0.3.0-p2`; all archives passed CRC/content checks. The debug AAB passed bundletool validation and universal-APK generation.
+- **Release CI:** [run `45742203868`](https://github.com/shanfxr3-cmyk/coastline-vicio-bay/actions/runs/45742203868), commit `27e5e08`, passed validation, all three captures, and release-signed builds. Downloaded STANDARD APK (`74659765` bytes) and ULTRA APK (`74659781` bytes) passed v2 verification with release-certificate SHA-256 `1d1b4c635840b12661d329de119e37691939107ae9750f50935bf7fde55c293b`; AAB (`26630305` bytes) passed JAR/ZIP verification, bundletool validation, and universal-APK generation. All archives exclude tooling/tests, and all CI PNGs passed integrity/dimension/nonblank checks.
 - Phase 2 is not complete: its first milestone is an optimized, testable atmosphere foundation. Weather and a continuous time cycle are not represented as shipped.
 
 ### Resume Steps After Interruption
-1. Finish `P2.7`, then ask the user to compare LOW first on `0.3.0-p2` and report the on-screen FPS/draw calls/resolution from **DBG**.
+1. Ask the user to install STANDARD from run `45742203868` (or the latest green documentation run), compare LOW first on `0.3.0-p2`, and report the on-screen FPS/draw calls/resolution from **DBG**.
 2. If LOW remains near 10 FPS, profile GPU versus CPU on the physical device before adding further effects; do not claim `B-006` fixed from Lavapipe numbers.
 3. After measurable device improvement, continue the remaining P2 atmosphere/weather items in order.

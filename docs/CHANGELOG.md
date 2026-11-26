@@ -13,6 +13,7 @@ All notable changes to the project are documented in this file.
 - Lavapipe LOW improved from 4 to 15 FPS and HIGH from 2 to 3 FPS at 1280×720; final STANDARD LOW/HIGH and ULTRA HIGH PNGs passed integrity/dimension/nonblank checks. Phone FPS remains unverified.
 - Sequential local STANDARD APK (`80285766` bytes), ULTRA APK (`80285790` bytes), and AAB (`28380094` bytes) passed signature/archive/content checks; the debug AAB passed bundletool validation and universal-APK generation.
 - Version advanced to `0.3.0-p2`/versionCode 2; CI now captures three Phase 2 preset/renderer images. Full 24-hour cycling and weather remain unfinished.
+- Green release CI run `45742203868` produced verified STANDARD APK (`74659765` bytes), ULTRA APK (`74659781` bytes), and AAB (`26630305` bytes); downloaded signatures, package/ABI, archive contents, bundletool conversion, and CI PNGs all passed.
 
 ## [Unreleased] — Phase 1 (Functionally Complete; Performance Follow-up in P2)
 - Added modular Jolt `CharacterBody3D` locomotion with idle, walk, sprint, crouch, jump, fall, and collision-tested vault states.
