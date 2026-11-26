@@ -4,6 +4,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, specular_schlick_ggx;
 uniform vec3 dry_albedo : source_color = vec3(0.11, 0.12, 0.14);
 uniform vec3 wet_albedo : source_color = vec3(0.045, 0.052, 0.065);
 uniform float wetness : hint_range(0.0, 1.0) = 0.65;
+uniform int quality_level = 2;
 
 varying vec3 world_pos;
 
@@ -29,8 +30,14 @@ void vertex() {
 }
 
 void fragment() {
-	float macro = value_noise(world_pos.xz * 0.14);
-	float micro = value_noise(world_pos.xz * 4.5);
+	float macro = 0.5;
+	float micro = 0.5;
+	if (quality_level == 0) {
+		macro = sin(world_pos.x * 0.23) * sin(world_pos.z * 0.19) * 0.25 + 0.5;
+	} else {
+		macro = value_noise(world_pos.xz * 0.14);
+		micro = value_noise(world_pos.xz * 4.5);
+	}
 	float puddle_mask = smoothstep(0.46, 0.72, macro) * wetness;
 
 	vec3 col = mix(dry_albedo, wet_albedo, puddle_mask);

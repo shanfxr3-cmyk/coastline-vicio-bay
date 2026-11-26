@@ -9,7 +9,7 @@ enum Mode {
 }
 
 const GAME_TITLE := "Coastline: Vicio Bay"
-const VERSION_TAG := "0.2.0-p1"
+const VERSION_TAG := "0.3.0-p2"
 
 var mode: Mode = Mode.BOOT
 var active_district: String = "Bayfront Promenade"

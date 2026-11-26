@@ -6,11 +6,13 @@ extends Node3D
 
 const WATER_SHADER := preload("res://shaders/bay_water_p0.gdshader")
 const ASPHALT_SHADER := preload("res://shaders/wet_asphalt_p0.gdshader")
+const SKY_SHADER := preload("res://shaders/coastal_sky_p2.gdshader")
 const EventBusScript := preload("res://core/event_bus.gd")
 const GameStateScript := preload("res://core/game_state.gd")
 const SettingsScript := preload("res://core/settings.gd")
 const StreamingScript := preload("res://world/streaming.gd")
 const PLAYER_SCENE := preload("res://player/player.tscn")
+const StaticMeshBatcherScript := preload("res://world/static_mesh_batcher.gd")
 
 var _tod_index: int = 0
 var _tod_presets: Array[Dictionary] = [
@@ -60,10 +62,20 @@ var _tod_presets: Array[Dictionary] = [
 
 var _sun: DirectionalLight3D = null
 var _world_env: WorldEnvironment = null
-var _sky_mat: ProceduralSkyMaterial = null
+var _sky_mat: ShaderMaterial = null
+var _sky: Sky = null
 var _actor: CharacterBody3D = null
 var _led_materials: Array[StandardMaterial3D] = []
 var _street_lights: Array[OmniLight3D] = []
+var _environment: Environment = null
+var _probe: ReflectionProbe = null
+var _water_mesh: PlaneMesh = null
+var _water_mat: ShaderMaterial = null
+var _road_mat: ShaderMaterial = null
+var _batcher: StaticMeshBatcherScript = null
+var _palm_trunk_mesh: CylinderMesh = null
+var _point_light_budget: int = 0
+var _light_update_elapsed: float = 0.0
 
 
 func _ready() -> void:
@@ -82,16 +94,17 @@ func _ready() -> void:
 
 
 func _build_environment() -> void:
-	_sky_mat = ProceduralSkyMaterial.new()
-	_sky_mat.sun_angle_max = 18.0
-	_sky_mat.sun_curve = 0.09
-
-	var sky := Sky.new()
-	sky.sky_material = _sky_mat
+	_sky_mat = ShaderMaterial.new()
+	_sky_mat.shader = SKY_SHADER
+	_sky = Sky.new()
+	_sky.sky_material = _sky_mat
+	_sky.process_mode = Sky.PROCESS_MODE_AUTOMATIC
+	_sky.radiance_size = Sky.RADIANCE_SIZE_128
 
 	var env := Environment.new()
+	_environment = env
 	env.background_mode = Environment.BG_SKY
-	env.sky = sky
+	env.sky = _sky
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_exposure = 1.08
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -116,30 +129,34 @@ func _build_environment() -> void:
 	_sun.shadow_bias = 0.03
 	add_child(_sun)
 
-	var probe := ReflectionProbe.new()
-	probe.name = "BayfrontProbe"
-	probe.position = Vector3(0.0, 18.0, 0.0)
-	probe.size = Vector3(240.0, 90.0, 240.0)
-	probe.update_mode = ReflectionProbe.UPDATE_ONCE
-	add_child(probe)
+	_probe = ReflectionProbe.new()
+	_probe.name = "BayfrontProbe"
+	_probe.position = Vector3(0.0, 18.0, 0.0)
+	_probe.size = Vector3(240.0, 90.0, 240.0)
+	_probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	_probe.cull_mask = 1
+	_probe.mesh_lod_threshold = 2.0
+	add_child(_probe)
 
 
 func _build_bayfront_world() -> void:
 	var city_root := Node3D.new()
 	city_root.name = "BayfrontGeometry"
 	add_child(city_root)
+	_batcher = StaticMeshBatcherScript.new(city_root)
 
 	# 1. Bay Ocean Surface (south/right side z > 10)
-	var water_mesh := PlaneMesh.new()
-	water_mesh.size = Vector2(420.0, 260.0)
-	water_mesh.subdivide_width = 72
-	water_mesh.subdivide_depth = 48
-	var water_mat := ShaderMaterial.new()
-	water_mat.shader = WATER_SHADER
+	_water_mesh = PlaneMesh.new()
+	_water_mesh.size = Vector2(420.0, 260.0)
+	_water_mesh.subdivide_width = 48
+	_water_mesh.subdivide_depth = 32
+	_water_mat = ShaderMaterial.new()
+	_water_mat.shader = WATER_SHADER
 	var water_inst := MeshInstance3D.new()
 	water_inst.name = "VicioBayWater"
-	water_inst.mesh = water_mesh
-	water_inst.material_override = water_mat
+	water_inst.mesh = _water_mesh
+	water_inst.material_override = _water_mat
+	water_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	water_inst.position = Vector3(0.0, -1.1, 140.0)
 	city_root.add_child(water_inst)
 
@@ -164,25 +181,16 @@ func _build_bayfront_world() -> void:
 	_add_mesh_box(city_root, Vector3(2.24, 0.06, 0.38), Vector3(-42.0, 0.82, 1.45), _make_led_material(Color(0.0, 0.83, 1.0)))
 
 	# 3. Wet Asphalt Boulevard (z in [-22, -5])
-	var road_mat := ShaderMaterial.new()
-	road_mat.shader = ASPHALT_SHADER
-	var road_mesh := BoxMesh.new()
-	road_mesh.size = Vector3(260.0, 0.4, 18.0)
-	var road_inst := _add_static_box(city_root, "BayfrontBoulevard", Vector3(260.0, 0.4, 18.0), Vector3(0.0, -0.25, -14.0), null)
-	(road_inst.get_child(0) as MeshInstance3D).material_override = road_mat
+	_road_mat = ShaderMaterial.new()
+	_road_mat.shader = ASPHALT_SHADER
+	_add_static_box(city_root, "BayfrontBoulevard", Vector3(260.0, 0.4, 18.0), Vector3(0.0, -0.25, -14.0), _road_mat, false, false)
 
 	# Crisp dashed lane markings
 	var stripe_mat := StandardMaterial3D.new()
 	stripe_mat.albedo_color = Color(0.92, 0.90, 0.82)
 	stripe_mat.roughness = 0.45
 	for i: int in range(-14, 15):
-		var stripe := MeshInstance3D.new()
-		var sm := BoxMesh.new()
-		sm.size = Vector3(3.4, 0.02, 0.22)
-		stripe.mesh = sm
-		stripe.material_override = stripe_mat
-		stripe.position = Vector3(float(i) * 8.0, -0.04, -14.0)
-		city_root.add_child(stripe)
+		_batcher.queue_box(city_root, Vector3(3.4, 0.02, 0.22), Vector3(float(i) * 8.0, -0.04, -14.0), stripe_mat, Vector3.ZERO, true, false)
 
 	# North sidewalk & tower plinths (z < -23)
 	_add_static_box(city_root, "NorthSidewalk", Vector3(260.0, 0.6, 56.0), Vector3(0.0, -0.3, -51.0), prom_mat)
@@ -256,6 +264,7 @@ func _build_bayfront_world() -> void:
 	_add_mesh_box(city_root, Vector3(18.0, 2.2, 4.6), Vector3(26.0, 0.1, 46.0), hull_mat)
 	_add_mesh_box(city_root, Vector3(10.0, 1.8, 3.6), Vector3(24.5, 2.0, 46.0), glass_b)
 	_add_mesh_box(city_root, Vector3(11.0, 0.25, 3.8), Vector3(24.5, 1.15, 46.0), cyan_led)
+	_batcher.flush(100.0)
 
 
 func _make_led_material(col: Color) -> StandardMaterial3D:
@@ -274,27 +283,18 @@ func _spawn_palm_tree(parent: Node3D, pos: Vector3, trunk_mat: Material, frond_m
 	palm.position = pos
 	parent.add_child(palm)
 
-	var trunk := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.19
-	cyl.bottom_radius = 0.30
-	cyl.height = 7.4
-	cyl.radial_segments = 10
-	trunk.mesh = cyl
-	trunk.material_override = trunk_mat
-	trunk.position = Vector3(0.0, 3.7, 0.0)
-	palm.add_child(trunk)
+	if _palm_trunk_mesh == null:
+		_palm_trunk_mesh = CylinderMesh.new()
+		_palm_trunk_mesh.top_radius = 0.19
+		_palm_trunk_mesh.bottom_radius = 0.30
+		_palm_trunk_mesh.height = 7.4
+		_palm_trunk_mesh.radial_segments = 10
+	_batcher.queue_mesh(_palm_trunk_mesh, palm, Vector3(0.0, 3.7, 0.0), Vector3.ZERO, Vector3.ONE, trunk_mat, true)
 
 	for f_idx: int in range(6):
-		var frond := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(0.45, 0.12, 3.2)
-		frond.mesh = box
-		frond.material_override = frond_mat
 		var angle: float = float(f_idx) * (TAU / 6.0)
-		frond.position = Vector3(sin(angle) * 1.4, 7.2, cos(angle) * 1.4)
-		frond.rotation = Vector3(-0.34, angle, 0.0)
-		palm.add_child(frond)
+		var frond_pos := Vector3(sin(angle) * 1.4, 7.2, cos(angle) * 1.4)
+		_batcher.queue_box(palm, Vector3(0.45, 0.12, 3.2), frond_pos, frond_mat, Vector3(-0.34, angle, 0.0), true)
 
 
 func _spawn_streetlamp(parent: Node3D, pos: Vector3, pole_mat: Material, led_mat: Material, add_point_light: bool) -> void:
@@ -302,9 +302,9 @@ func _spawn_streetlamp(parent: Node3D, pos: Vector3, pole_mat: Material, led_mat
 	lamp.position = pos
 	parent.add_child(lamp)
 
-	_add_mesh_box(lamp, Vector3(0.18, 6.2, 0.18), Vector3(0.0, 3.1, 0.0), pole_mat)
-	_add_mesh_box(lamp, Vector3(0.22, 0.16, 1.5), Vector3(0.0, 6.2, -0.65), pole_mat)
-	_add_mesh_box(lamp, Vector3(0.18, 0.08, 0.9), Vector3(0.0, 6.1, -0.9), led_mat)
+	_add_mesh_box(lamp, Vector3(0.18, 6.2, 0.18), Vector3(0.0, 3.1, 0.0), pole_mat, Vector3.ZERO, true)
+	_add_mesh_box(lamp, Vector3(0.22, 0.16, 1.5), Vector3(0.0, 6.2, -0.65), pole_mat, Vector3.ZERO, true)
+	_add_mesh_box(lamp, Vector3(0.18, 0.08, 0.9), Vector3(0.0, 6.1, -0.9), led_mat, Vector3.ZERO, true)
 
 	if add_point_light:
 		var light := OmniLight3D.new()
@@ -312,24 +312,20 @@ func _spawn_streetlamp(parent: Node3D, pos: Vector3, pole_mat: Material, led_mat
 		light.light_color = Color(1.0, 0.85, 0.65)
 		light.light_energy = 1.6
 		light.omni_range = 16.0
+		light.distance_fade_enabled = true
+		light.distance_fade_begin = 32.0
+		light.distance_fade_length = 18.0
 		light.shadow_enabled = false
 		lamp.add_child(light)
 		_street_lights.append(light)
 
 
-func _add_static_box(parent: Node3D, node_name: String, size: Vector3, pos: Vector3, mat: Material) -> StaticBody3D:
+func _add_static_box(parent: Node3D, node_name: String, size: Vector3, pos: Vector3, mat: Material, detail: bool = false, casts_shadow: bool = true) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = node_name
 	body.position = pos
 	parent.add_child(body)
-
-	var mesh_inst := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh_inst.mesh = box
-	if mat != null:
-		mesh_inst.material_override = mat
-	body.add_child(mesh_inst)
+	_batcher.queue_box(body, size, Vector3.ZERO, mat, Vector3.ZERO, detail, casts_shadow)
 
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -339,15 +335,8 @@ func _add_static_box(parent: Node3D, node_name: String, size: Vector3, pos: Vect
 	return body
 
 
-func _add_mesh_box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
-	var mesh_inst := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh_inst.mesh = box
-	mesh_inst.position = pos
-	mesh_inst.material_override = mat
-	parent.add_child(mesh_inst)
-	return mesh_inst
+func _add_mesh_box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material, rotation: Vector3 = Vector3.ZERO, detail: bool = false) -> void:
+	_batcher.queue_box(parent, size, pos, mat, rotation, detail)
 
 
 func _build_player_rig() -> void:
@@ -356,6 +345,13 @@ func _build_player_rig() -> void:
 	_actor.position = Vector3(-42.0, 0.1, 3.2)
 	_actor.rotation.y = 0.0
 	add_child(_actor)
+
+
+func _process(delta: float) -> void:
+	_light_update_elapsed += delta
+	if _light_update_elapsed >= 0.5:
+		_light_update_elapsed = 0.0
+		_update_streetlight_budget()
 
 
 func _physics_process(_delta: float) -> void:
@@ -384,9 +380,12 @@ func _apply_tod(idx: int) -> void:
 		_sun.light_energy = preset["sun_energy"]
 
 	if _sky_mat != null:
-		_sky_mat.sky_top_color = preset["sky_top"]
-		_sky_mat.sky_horizon_color = preset["sky_horizon"]
-		_sky_mat.ground_horizon_color = preset["ground_horizon"]
+		_sky_mat.set_shader_parameter("sky_top_color", preset["sky_top"])
+		_sky_mat.set_shader_parameter("sky_horizon_color", preset["sky_horizon"])
+		_sky_mat.set_shader_parameter("ground_horizon_color", preset["ground_horizon"])
+		_sky_mat.set_shader_parameter("sun_color", preset["sun_color"])
+		_sky_mat.set_shader_parameter("sun_direction", _sun.global_basis.z.normalized())
+		_sky_mat.set_shader_parameter("night_factor", 1.0 if tod_name == "Night" else (0.35 if tod_name == "Blue" else 0.0))
 
 	if _world_env != null and _world_env.environment != null:
 		_world_env.environment.ambient_light_energy = preset["ambient_energy"]
@@ -410,13 +409,73 @@ func _apply_tod(idx: int) -> void:
 func _on_quality_changed(preset_name: String) -> void:
 	if _sun == null:
 		return
+	var st := get_node_or_null("/root/Settings") as SettingsScript
+	if st == null:
+		return
 	match preset_name:
 		"LOW":
+			_sun.shadow_enabled = false
 			_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-			_sun.directional_shadow_max_distance = 75.0
 		"MEDIUM":
+			_sun.shadow_enabled = true
 			_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-			_sun.directional_shadow_max_distance = 120.0
 		"HIGH":
+			_sun.shadow_enabled = true
 			_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-			_sun.directional_shadow_max_distance = 180.0
+	_sun.directional_shadow_max_distance = st.shadow_distance
+	_point_light_budget = st.dynamic_light_budget
+	_update_streetlight_budget()
+
+	if _environment != null:
+		_environment.glow_enabled = st.glow_enabled
+		_environment.fog_enabled = st.fog_enabled
+	if _sky != null:
+		match preset_name:
+			"LOW":
+				_sky.radiance_size = Sky.RADIANCE_SIZE_64
+			"MEDIUM":
+				_sky.radiance_size = Sky.RADIANCE_SIZE_128
+			"HIGH":
+				_sky.radiance_size = Sky.RADIANCE_SIZE_256
+	if _sky_mat != null:
+		_sky_mat.set_shader_parameter("quality_level", st.shader_tier)
+	if _probe != null:
+		_probe.visible = st.reflection_probe_enabled
+	if _batcher != null:
+		_batcher.apply_detail_distance(st.detail_distance)
+	if _water_mesh != null:
+		_water_mesh.subdivide_width = [8, 24, 48][st.water_tier] as int
+		_water_mesh.subdivide_depth = [4, 12, 32][st.water_tier] as int
+	if _water_mat != null:
+		_water_mat.set_shader_parameter("quality_level", st.water_tier)
+	if _road_mat != null:
+		_road_mat.set_shader_parameter("quality_level", st.shader_tier)
+	if _actor != null:
+		var camera := _actor.get_camera_rig().get_camera() as Camera3D
+		if camera != null:
+			camera.far = [260.0, 380.0, 550.0][st.water_tier] as float
+
+
+func _update_streetlight_budget() -> void:
+	if _actor == null:
+		return
+	_street_lights.sort_custom(func(a: OmniLight3D, b: OmniLight3D) -> bool:
+		return a.global_position.distance_squared_to(_actor.global_position) < b.global_position.distance_squared_to(_actor.global_position)
+	)
+	for index: int in range(_street_lights.size()):
+		_street_lights[index].visible = index < _point_light_budget
+
+
+func get_optimization_stats() -> Dictionary:
+	var active_lights: int = 0
+	for light: OmniLight3D in _street_lights:
+		if light.visible:
+			active_lights += 1
+	return {
+		"static_batches": _batcher.get_batch_count() if _batcher != null else 0,
+		"static_instances": _batcher.get_instance_count() if _batcher != null else 0,
+		"active_street_lights": active_lights,
+		"water_subdivisions": Vector2i(_water_mesh.subdivide_width, _water_mesh.subdivide_depth) if _water_mesh != null else Vector2i.ZERO,
+		"shadows_enabled": _sun.shadow_enabled if _sun != null else false,
+		"probe_enabled": _probe.visible if _probe != null else false,
+	}

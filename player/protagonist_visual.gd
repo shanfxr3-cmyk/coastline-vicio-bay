@@ -166,6 +166,7 @@ func _box(parent: Node3D, part_name: String, size: Vector3, pos: Vector3, mat: M
 	mesh.size = size
 	instance.mesh = mesh
 	instance.material_override = mat
+	instance.layers = 2
 	instance.position = pos
 	parent.add_child(instance)
 	return instance
@@ -181,6 +182,7 @@ func _cylinder(parent: Node3D, part_name: String, radius: float, height: float, 
 	mesh.radial_segments = 10
 	instance.mesh = mesh
 	instance.material_override = mat
+	instance.layers = 2
 	instance.position = pos
 	parent.add_child(instance)
 	return instance
@@ -196,6 +198,7 @@ func _sphere(parent: Node3D, part_name: String, radius: float, pos: Vector3, mat
 	mesh.rings = 6
 	instance.mesh = mesh
 	instance.material_override = mat
+	instance.layers = 2
 	instance.position = pos
 	instance.scale = part_scale
 	parent.add_child(instance)

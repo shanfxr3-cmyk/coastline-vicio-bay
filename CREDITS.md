@@ -17,4 +17,4 @@ All third-party tools, engines, libraries, and CC0/CC-BY assets used in the proj
 - **Mesa Lavapipe / Xvfb** — Mesa and X.Org contributors — open-source licenses; used only for headless validation — https://mesa3d.org/ · https://www.x.org/
 
 ## External Assets
-_All Phase 0 and Phase 1 visual assets are original procedural geometry, shaders, UI, or repository-authored text. `assets/manifest.json` currently contains zero external assets. Every future downloaded asset will record its source URL, author, commercial-safe license, and SHA-256 hash here and in that manifest._
+_All Phase 0, Phase 1, and current Phase 2 visual assets are original procedural geometry, shaders, UI, or repository-authored text. `assets/manifest.json` currently contains zero external assets. Every future downloaded asset will record its source URL, author, commercial-safe license, and SHA-256 hash here and in that manifest._

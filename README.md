@@ -1,17 +1,18 @@
 # Coastline: Vicio Bay
 
-Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 is approved on a physical phone. Phase 1 adds dual protagonists, full on-foot locomotion, and a collision-aware third-person camera; its fresh device QA is pending.
+Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 and Phase 1 functionality are approved on a physical phone. Phase 2 is in progress with a major low-end optimisation pass and an original procedural sky foundation; the phone's 7–10 FPS regression remains under active verification (`docs/BUGS.md`, `B-006`).
 
 ## Reproduce the toolchain
 
 ```bash
 bash tools/setup_codespace.sh
 bash tools/validate.sh
-bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20
-bash tools/screenshot.sh forward_plus tests/screenshots/phase1_ultra.png 1280x720 20
+bash tools/screenshot.sh mobile tests/screenshots/phase2_low.png 1280x720 30 low
+bash tools/screenshot.sh mobile tests/screenshots/phase2_high.png 1280x720 30 high
+bash tools/screenshot.sh forward_plus tests/screenshots/phase2_ultra.png 1280x720 30 high
 ```
 
-The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Validation checks repository hygiene, the asset manifest, every GDScript file, a headless boot of all seven autoloads and the main scene, plus eight character/camera physics regressions.
+The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Seven-stage validation checks repository hygiene, the asset manifest, all 16 GDScript files, a headless boot of all seven autoloads and the main scene, eight character/camera physics regressions, and the Phase 2 preset/batching/collider performance suite. Screenshot quality arguments are optional; omitting one uses automatic detection.
 
 ## Build Android artifacts
 
@@ -46,9 +47,10 @@ For a locally signed release AAB, provide `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYS
 3. Launch **Coastline: Vicio Bay** and verify the lit Bayfront scene and articulated protagonist.
 4. Test the left stick, right-side camera drag, **SPRINT**, **CROUCH**, and **JUMP**. Walk toward the low practice barrier and tap **VAULT** when it appears.
 5. Tap **KIAN / SERA** to switch protagonists. Walk toward a wall while orbiting to confirm the camera pulls in without clipping.
-6. Tap **TOD**, **QUAL**, and **DBG** to verify lighting presets, quality switching, and telemetry. On a flagship Vulkan phone, repeat the launch/control check with `coastline-ultra-apk`.
+6. Tap **TOD**, **QUAL**, and **DBG** to verify lighting presets, quality switching, and telemetry. Compare LOW, MEDIUM, and HIGH for at least 30 seconds each; the adaptive scale begins after warm-up. Record the on-screen FPS, draw calls, actual 3D resolution, and GPU name.
+7. Start with LOW on the 6 GB test phone. On a flagship Vulkan phone, also repeat the launch/control check with `coastline-ultra-apk`.
 
-Report any launch failure, black screen, touch problem, clipping, or renderer-specific issue before Phase 1 sign-off. Performance and thermal claims require a physical device; Lavapipe screenshots are not a phone benchmark.
+Report launch failures, black screens, touch problems, clipping, visual regressions, and per-preset FPS for version `0.3.0-p2`. Phase 1 functionality is approved, but performance sign-off remains open as `B-006`. Lavapipe screenshots are relative regression checks, not phone benchmarks.
 
 ## Configure CI release signing
 

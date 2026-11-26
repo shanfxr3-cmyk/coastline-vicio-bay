@@ -24,8 +24,13 @@ RENDERER="${1:-mobile}"
 OUT_FILE="${2:-$OUT_DIR/phase0_${RENDERER}.png}"
 RES="${3:-1280x720}"
 FRAMES="${4:-30}"
+QUALITY="${5:-}"
+QUALITY_ARGS=()
+if [ -n "$QUALITY" ]; then
+  QUALITY_ARGS=("--quality=$QUALITY")
+fi
 
-echo "Rendering scene with renderer=$RENDERER (${RES}, ${FRAMES} frames) -> $OUT_FILE"
+echo "Rendering scene with renderer=$RENDERER (${RES}, ${FRAMES} frames, quality=${QUALITY:-auto}) -> $OUT_FILE"
 
 export VK_ICD_FILENAMES="$ICD"
 export XDG_RUNTIME_DIR="/tmp/xdg-runtime-$(id -u)"
@@ -40,7 +45,7 @@ xvfb-run -a -s "-screen 0 1280x720x24" \
   --rendering-method "$RENDERER" \
   --windowed \
   --resolution "$RES" \
-  -- "--screenshot=$OUT_FILE" "--screenshot-frames=$FRAMES"
+  -- "--screenshot=$OUT_FILE" "--screenshot-frames=$FRAMES" "${QUALITY_ARGS[@]}"
 
 if [ ! -f "$OUT_FILE" ] || [ ! -s "$OUT_FILE" ]; then
   echo "ERROR: Screenshot not generated at $OUT_FILE" >&2

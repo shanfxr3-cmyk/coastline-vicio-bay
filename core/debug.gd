@@ -116,7 +116,11 @@ func _refresh_text() -> void:
 	var tier: String = st.build_tier if st != null else "STANDARD"
 	var method: String = st.renderer_method if st != null else "mobile"
 	var preset: String = st.get_preset_name() if st != null else "MEDIUM"
-	var rscale: float = st.render_scale if st != null else 1.0
+	var rscale: float = get_viewport().scaling_3d_scale if st != null else 1.0
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var render_size: Vector2i = Vector2i(Vector2(window_size) * rscale)
+	var msaa: int = int(get_viewport().msaa_3d)
+	var gpu_name: String = RenderingServer.get_video_adapter_name()
 	var chunk: Vector2i = stream.active_chunk if stream != null else Vector2i.ZERO
 	var loaded_c: int = stream.get_loaded_count() if stream != null else 0
 	var pending_c: int = stream.get_pending_count() if stream != null else 0
@@ -124,6 +128,7 @@ func _refresh_text() -> void:
 	_label.text = (
 		"%s  [%s | %s | %s x%.2f]\n"
 		+ "FPS: %.1f (%.2f ms)  |  Calls: %d  |  Tris: %d\n"
+		+ "3D: %dx%d  |  MSAA: %d  |  GPU: %s\n"
 		+ "VRAM: %.1f MB  |  RAM: %.1f MB\n"
 		+ "Stream: chunk (%d,%d) loaded=%d queue=%d\n"
 		+ "Physics (%s): active=%d  |  TOD: %s\n"
@@ -138,6 +143,10 @@ func _refresh_text() -> void:
 		frame_ms,
 		draw_calls,
 		tris,
+		render_size.x,
+		render_size.y,
+		msaa,
+		gpu_name,
 		vram_mb,
 		ram_mb,
 		chunk.x,
@@ -154,6 +163,20 @@ func _refresh_text() -> void:
 
 func _capture_and_quit() -> void:
 	await RenderingServer.frame_post_draw
+	var st := get_node_or_null("/root/Settings") as SettingsScript
+	var render_scale: float = get_viewport().scaling_3d_scale
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	print("RENDER_STATS: fps=%.2f calls=%d tris=%d scale=%.3f window=%dx%d gpu=%s" % [
+		Engine.get_frames_per_second(),
+		int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)),
+		int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)),
+		render_scale,
+		window_size.x,
+		window_size.y,
+		RenderingServer.get_video_adapter_name(),
+	])
+	if st != null:
+		print("RENDER_PRESET: name=%s requested_scale=%.3f actual_scale=%.3f shadows=%d" % [st.get_preset_name(), st.render_scale, render_scale, st.shadow_atlas_size])
 	var exit_code: int = 0
 	var img: Image = get_viewport().get_texture().get_image()
 	if img != null:

@@ -4,12 +4,20 @@ Track all discovered bugs here with severity (`P0` blocker, `P1` major, `P2` min
 
 ## Open Bugs
 
+### `B-006` — P0 — Phase 1 runs at 7–10 FPS on the accepted test phone
+- **Device:** POCO M6 Pro 5G, 6 GB RAM, STANDARD release APK version `0.2.0-p1`.
+- **Observed:** User explicitly approved Phase 1 functionality on 2026-11-25 but measured approximately 7–10 FPS on LOW, MEDIUM, and HIGH. This blocks performance acceptance despite successful launch/controls.
+- **Root causes found:** Android auto-detection selected HIGH from an eight-core CPU; explicit preset application and initial autoload application used different paths; requested shadow-atlas sizes were stored but never sent to the rendering server; immutable scenery, water, palms, roads, and shader effects were not tiered aggressively enough.
+- **Implemented candidate fix:** Real per-preset application, conservative Android LOW default, lower 3D resolutions, reduced geometry/draw calls through 42 spatial MultiMesh batches, tiered lights/shadows/probes/fog/glow/water/clouds, optional adaptive 3D scale, and expanded performance telemetry/tests.
+- **Relative verification:** Lavapipe LOW improved from 4 to 15 FPS (153→60 calls; 15,474→6,230 triangles), and HIGH from 2 to 3 FPS (187→106 calls; 45,292→17,738 triangles). These software-Vulkan results do not prove a phone frame rate.
+- **Next:** User must compare `0.3.0-p2` LOW/MEDIUM/HIGH on the same phone and report FPS, draw calls, actual 3D resolution, and visual defects from **DBG**. Keep open until measured device improvement is confirmed.
+
 ### `B-003` — P2 — ReflectionProbe textures reported at screenshot shutdown
 - **Repro:** Run `bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20` with Lavapipe.
 - **Observed:** The PNG saves successfully and exits zero, then Godot reports `WARNING: 7 RIDs of type "Texture" were leaked.` STANDARD and ULTRA behave identically.
 - **Isolation:** An empty rendered scene exits cleanly. Removing `BayfrontProbe` before its first render also exits cleanly; enabling either `UPDATE_ONCE` or `UPDATE_ALWAYS` reproduces exactly seven leaked texture RIDs. Explicit scene destruction plus eight drain frames does not remove the warning.
-- **Impact:** No observed boot, capture, gameplay, or user-phone failure. This appears scoped to Godot 4.7.2 ReflectionProbe GPU teardown under Lavapipe; required runtime reflections remain enabled.
-- **Next:** Check physical-device logs during Phase 1 QA and reassess after a Godot patch upgrade. Do not “fix” it by silently removing reflections.
+- **Impact:** No observed boot, capture, gameplay, or user-phone failure. This appears scoped to Godot 4.7.2 ReflectionProbe GPU teardown under Lavapipe. LOW now honestly disables the runtime probe as part of its documented lower tier; MEDIUM/HIGH retain real reflections.
+- **Next:** Check physical-device logs during the `0.3.0-p2` retest and reassess after a Godot patch upgrade. Do not silently remove reflections from tiers that advertise them.
 
 ## Resolved Bugs
 

@@ -7,8 +7,8 @@
 | Phase | Name | Status | Target |
 |---|---|---|---|
 | **P0** | Build Pipeline, Skeleton, Touch Demo, CI (STANDARD / ULTRA / AAB) | `COMPLETE` | Phone accepted + release-signed CI verified |
-| **P1** | Character Controller, Camera, Touch Controls | `AWAITING PHONE QA` | Implementation, tests, and release CI complete; device sign-off pending |
-| **P2** | Sky, Clouds, Weather, Time of Day, Lighting | `PENDING` | 24h cycle, volumetric clouds, rain/wetness |
+| **P1** | Character Controller, Camera, Touch Controls | `COMPLETE — DEVICE PERFORMANCE FOLLOW-UP` | User-approved on 2026-11-25; 7–10 FPS regression tracked as `B-006` |
+| **P2** | Sky, Clouds, Weather, Time of Day, Lighting | `IN PROGRESS` | Optimisation + procedural sky foundation done; cycle, clouds, weather remain |
 | **P3** | District 1 (Bayfront / Palm Row), Road System, Chunk Streaming | `PENDING` | 128m threaded streaming chunks + roads |
 | **P4** | Supercars, Traffic, Driving Feel | `PENDING` | Raycast RigidBody3D physics + hero cars |
 | **P5** | Weapons, Combat, Ragdoll, Destruction | `PENDING` | Ballistics, PhysicalBoneSimulator3D, breakables |
@@ -60,10 +60,8 @@
 - **Clean exports:** Downloaded APKs/AAB contain neither `opencode.json` nor test scripts (`B-005`). Gradle fallback restoration avoided the Maven 429 recurrence (`B-004`).
 - **P0 result:** Phone acceptance, local/CI validation, both APKs, AAB, and release signing are complete. No open P0 code/build/signing blocker remains.
 
-### Exact Next Steps
-1. Request one Phase 1 STANDARD phone check from run `45548311788`; do not request another Phase 0 installation.
-2. Record the user's movement, sprint, crouch, jump/vault, switching, camera-collision, and ULTRA results in `P1.8`/`P1.9`.
-3. Start Phase 2 only after fresh Phase 1 device acceptance.
+### Completed Follow-up — 2026-11-25
+- The user installed Phase 1, explicitly approved it as working, and reported approximately 7–10 FPS on LOW, MEDIUM, and HIGH on a POCO M6 Pro 5G/6 GB. Functional sign-off is complete; the performance defect is tracked separately as `B-006` and is being addressed in P2.
 
 ### Definition of Done (Every Phase)
 1. **PASS:** `bash tools/validate.sh` passes locally and in CI (import, `--check-only` on all `.gd`, headless boot test).
@@ -74,7 +72,7 @@
 
 ---
 
-## Active Phase: P1 — Character Controller, Camera, Touch Controls
+## Completed Phase: P1 — Character Controller, Camera, Touch Controls
 
 ### Checklist
 - [x] `P1.1` Modular `player/player.tscn` + `player/player_controller.gd` using Jolt `CharacterBody3D`; old capsule/controller code removed from `world/main.gd`
@@ -84,21 +82,44 @@
 - [x] `P1.5` Dynamic touch thumbstick, swipe orbit, sprint lock, crouch/stand, protagonist switch, and contextual JUMP/VAULT HUD
 - [x] `P1.6` Keyboard and gamepad parity: WASD/arrows + left stick, mouse/right-stick camera, Space/A action, C/B crouch, Tab/Y switch, Shift/left-stick sprint
 - [x] `P1.7` `tests/player_test.gd`: walk, sprint, crouch, jump, vault completion, protagonist switching, camera obstruction, and standing-clearance regressions; all eight checks pass
-- [ ] `P1.8` STANDARD and ULTRA screenshots generated in CI and passed PNG/dimension/nonblank checks; fresh visual/device review remains because this session has no image-viewing capability. Nonfatal probe shutdown warning remains `B-003`
-- [ ] `P1.9` Local validation/Android builds, release-signed green CI, and documentation pass; fresh user Phase 1 phone QA remains
+- [x] `P1.8` STANDARD and ULTRA screenshots generated in CI and passed PNG/dimension/nonblank checks; fresh local visual inspection remains unavailable (`L-005`). Nonfatal probe shutdown warning remains `B-003`
+- [x] `P1.9` Local validation/Android builds, release-signed green CI, and documentation passed; user approved Phase 1 functionality on a physical phone on 2026-11-25 and reported `B-006`
 
 ### Verification Report — 2026-11-25
 - **Local:** `bash tools/validate.sh` passes 14 scripts, seven-autoload boot, Jolt/25-chunk checks, and all eight character/camera tests. Sequential local STANDARD APK (`80282753` bytes), ULTRA APK (`80282781` bytes), and debug AAB (`28377390` bytes) passed signature/archive checks before the export-content cleanup.
 - **Clean local export:** After `B-005`, a sequential validation + AAB build passed; archive inspection confirmed no `opencode.json` or test scripts and valid CRCs.
 - **CI:** Run `45548311788` passed validation, both renderer captures, all release-signed Android builds, and downloadable-artifact verification. The AAB also generated a valid universal APK set with bundletool.
-- **Visual/device limit:** Both CI PNGs are valid 1280×720 nonblank images, but no fresh visual inspection or physical-device performance claim is made (`L-005`, `B-003`).
+- **Visual/device result:** Both CI PNGs are valid 1280×720 nonblank images. The user explicitly accepted the Phase 1 build on a physical phone on 2026-11-25; its 7–10 FPS report is open as `B-006`, not counted as successful performance validation.
+
+## Active Phase: P2 — Sky, Clouds, Weather, Time of Day, Lighting
+
+### Checklist
+- [x] `P2.1` Record Phase 1 device acceptance and diagnose `B-006`: requested quality was not consistently applied, Android auto-detection selected HIGH from CPU cores, shadow atlases were not applied, and unbatched geometry/per-pixel effects dominated the software baseline
+- [x] `P2.2` Rebuild LOW/MEDIUM/HIGH budgets: 0.50/0.70/0.85 base scale, 30/45/60 FPS caps, real 512/1024/2048 shadow atlases, tiered lights/fog/glow/probes/AA/water/detail, and conservative STANDARD Android auto-detection
+- [x] `P2.3` Batch immutable scenery into spatial MultiMeshes while retaining every independent collider; budget 163 instances into 42 batches and preserve vault/player regression tests
+- [x] `P2.4` Add deterministic preset CLI selection, actual render-scale telemetry, and a structural performance suite to all seven validation stages
+- [x] `P2.5` Add original quarter-resolution procedural sky/cloud/sun/star shading with tiered radiance and no time-driven reflection rebuild loop
+- [x] `P2.6` Render final LOW/HIGH STANDARD and HIGH ULTRA screenshots under Lavapipe; LOW improved from 4 to 15 FPS and HIGH from 2 to 3 FPS at 1280×720. These are software-render comparisons, not phone FPS claims
+- [ ] `P2.7` Build version `0.3.0-p2`/versionCode 2 as STANDARD, ULTRA, and AAB; push green release CI and verify downloadable artifacts
+- [ ] `P2.8` Obtain physical-phone LOW/MEDIUM/HIGH FPS and visual results; iterate until the performance defect has measured improvement
+- [ ] `P2.9` Full continuous 24-hour sun/moon cycle with renderer-aware atmospheric lighting and smooth phase interpolation
+- [ ] `P2.10` Layered volumetric cloud raymarch, scattering/silver lining, aerial perspective, and quality fallbacks beyond the current procedural cloud foundation
+- [ ] `P2.11` Rain, storms, wetness/puddles/ripples, wind, lightning, fog, heat haze, and per-weather grading
+
+### Current Performance Evidence
+| Capture | FPS | Draw calls | Triangles | Actual 3D scale | Shadow atlas |
+|---|---:|---:|---:|---:|---:|
+| Phase 1 LOW baseline | 4 | 153 | 15,474 | 0.670 | 1024 (requested; not applied) |
+| Phase 2 LOW | 15 | 60 | 6,230 | 0.500 | 512 |
+| Phase 1 HIGH baseline | 2 | 187 | 45,292 | 1.000 | 4096 (requested; not applied) |
+| Phase 2 HIGH / STANDARD | 3 | 106 | 17,738 | 0.850 | 2048 |
+| Phase 2 HIGH / ULTRA | 1 | 215 | 17,746 | 0.850 | 2048 |
+
+- Final local PNGs passed integrity, 1280×720 dimension, and nonblank pixel-statistic checks. Fresh image viewing remains unavailable; CI must repeat all three captures.
+- Sequential local Android builds passed: STANDARD APK `80285766` bytes, ULTRA APK `80285790` bytes, and AAB `28380094` bytes. Both debug APKs passed v2 signature checks and report versionCode 2/version `0.3.0-p2`; all archives passed CRC/content checks. The debug AAB passed bundletool validation and universal-APK generation. Release signing remains a CI check.
+- Phase 2 is not complete: its first milestone is an optimized, testable atmosphere foundation. Weather and a continuous time cycle are not represented as shipped.
 
 ### Resume Steps After Interruption
-1. Install `coastline-standard-apk` from green run `45548311788`; test movement, sprint lock, crouch/stand, jump, the low-barrier VAULT prompt, Kian/Sera switching, and camera pull-in near walls.
-2. On a flagship Vulkan phone, repeat launch/basic controls with `coastline-ultra-apk`; report any black screen, clipping, touch, or renderer issue.
-3. Record the user's report in `P1.8`/`P1.9`, `BUGS.md`, and `LIMITS.md`. If accepted, mark Phase 1 complete and begin Phase 2; otherwise fix the reported defect before proceeding.
-
-## Next Up After P1: Phase 2 — Sky, Clouds, Weather, Time of Day, Lighting
-- Full 24-hour sun/moon cycle and renderer-aware atmospheric lighting
-- Custom raymarched cloud sky with half/quarter-resolution fallback
-- Rain, storms, wetness/puddles, wind, and per-weather grading
+1. Finish `P2.7`, then ask the user to compare LOW first on `0.3.0-p2` and report the on-screen FPS/draw calls/resolution from **DBG**.
+2. If LOW remains near 10 FPS, profile GPU versus CPU on the physical device before adding further effects; do not claim `B-006` fixed from Lavapipe numbers.
+3. After measurable device improvement, continue the remaining P2 atmosphere/weather items in order.
