@@ -2,6 +2,8 @@
 
 Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 and Phase 1 are phone-approved. The entry-level reference phone sustains LOW at 30 FPS (`B-006` resolved). Phase 2 now includes GPU/RAM device classification, automatic preset fallback, and a continuous 24-hour atmosphere; weather and richer clouds remain in progress.
 
+Latest verified build: **`0.4.0-p2` / versionCode 3**, [green release CI run `45944165390`](https://github.com/shanfxr3-cmyk/coastline-vicio-bay/actions/runs/45944165390). Download `coastline-standard-apk` for the entry phone and `phase2-screenshots` for the HIGH golden/midnight captures.
+
 ## Reproduce the toolchain
 
 ```bash

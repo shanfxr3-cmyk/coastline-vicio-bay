@@ -12,7 +12,8 @@ All notable changes to the project are documented in this file.
 - Added a continuous 24-minute/24-hour cycle with interpolated dawn/day/golden/blue/night lighting, solar/lunar direction and energy, moon disk/glow, moving cloud offsets, TOD phase jumps, and deterministic `--time-hours` captures.
 - Bounded atmosphere updates to 4.0/1.0/0.25 seconds on LOW/MEDIUM/HIGH; local LOW still renders at 15 FPS after the cycle implementation.
 - Added GPU/RAM, fallback, uncap, full-day wrap, interpolation, sun/moon, cloud-motion, quality-interval, and scene-sync regression checks. Version advanced to `0.4.0-p2`/versionCode 3.
-- Sequential local STANDARD APK (`80296799` bytes), ULTRA APK (`80296827` bytes), and AAB (`28391261` bytes) passed signature/archive/content checks; AAB bundletool validation/conversion passed. HIGH golden/midnight and ULTRA captures passed integrity/nonblank checks; release CI is pending.
+- Sequential local STANDARD APK (`80296799` bytes), ULTRA APK (`80296827` bytes), and AAB (`28391261` bytes) passed signature/archive/content checks; AAB bundletool validation/conversion passed. HIGH golden/midnight and ULTRA captures passed integrity/nonblank checks.
+- Green release CI run `45944165390` produced verified STANDARD APK (`74670770` bytes), ULTRA APK (`74670786` bytes), and AAB (`26641567` bytes). Downloaded release signatures, versionCode 3, SDK/ABI, archive contents, bundletool conversion, and all four CI PNGs passed verification.
 
 ## [Unreleased] — Phase 2 (Optimisation & Atmosphere Foundation)
 - Recorded user Phase 1 device acceptance and the 7–10 FPS regression on a POCO M6 Pro 5G/6 GB (`B-006`); performance acceptance remains pending.
