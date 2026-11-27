@@ -6,6 +6,8 @@ uniform vec3 sky_horizon_color : source_color = vec3(0.95, 0.58, 0.32);
 uniform vec3 ground_horizon_color : source_color = vec3(0.16, 0.24, 0.32);
 uniform vec3 sun_color : source_color = vec3(1.0, 0.64, 0.34);
 uniform vec3 sun_direction = vec3(0.0, 0.22, 0.98);
+uniform vec3 moon_direction = vec3(0.0, 0.75, -0.65);
+uniform float moon_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float night_factor : hint_range(0.0, 1.0) = 0.0;
 uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.46;
 uniform vec2 cloud_offset = vec2(0.0);
@@ -76,6 +78,12 @@ void sky() {
 		float sun_glow = pow(sun_dot, 48.0) * 0.18 * (1.0 - night_factor);
 		float sun_disk = smoothstep(0.99962, 0.99988, sun_dot) * (1.0 - night_factor);
 		base += sun_color * (sun_glow + sun_disk * 2.4);
+		if (moon_strength > 0.001) {
+			float moon_dot = max(dot(dir, normalize(moon_direction)), 0.0);
+			float moon_disk = smoothstep(0.99972, 0.99990, moon_dot) * moon_strength;
+			float moon_glow = pow(moon_dot, 96.0) * 0.08 * moon_strength;
+			base += vec3(0.65, 0.75, 1.0) * (moon_disk * 1.6 + moon_glow);
+		}
 		vec2 star_cell = floor(SKY_COORDS * vec2(520.0, 260.0));
 		float star = step(0.9965, hash21(star_cell)) * night_factor;
 		star *= smoothstep(0.04, 0.28, dir.y);

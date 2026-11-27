@@ -14,51 +14,9 @@ const StreamingScript := preload("res://world/streaming.gd")
 const PLAYER_SCENE := preload("res://player/player.tscn")
 const StaticMeshBatcherScript := preload("res://world/static_mesh_batcher.gd")
 
-var _tod_index: int = 0
-var _tod_presets: Array[Dictionary] = [
-	{
-		"name": "Golden",
-		"sun_pitch": -13.0,
-		"sun_yaw": -38.0,
-		"sun_color": Color(1.0, 0.64, 0.34),
-		"sun_energy": 1.85,
-		"sky_top": Color(0.11, 0.30, 0.44),
-		"sky_horizon": Color(0.95, 0.58, 0.32),
-		"ground_horizon": Color(0.16, 0.24, 0.32),
-		"ambient_energy": 0.42,
-		"fog_color": Color(0.76, 0.56, 0.44),
-		"fog_density": 0.0018,
-		"led_boost": 1.6,
-	},
-	{
-		"name": "Blue",
-		"sun_pitch": -2.5,
-		"sun_yaw": -55.0,
-		"sun_color": Color(0.45, 0.62, 0.90),
-		"sun_energy": 0.85,
-		"sky_top": Color(0.05, 0.11, 0.22),
-		"sky_horizon": Color(0.24, 0.41, 0.58),
-		"ground_horizon": Color(0.06, 0.09, 0.14),
-		"ambient_energy": 0.32,
-		"fog_color": Color(0.13, 0.23, 0.35),
-		"fog_density": 0.0030,
-		"led_boost": 2.6,
-	},
-	{
-		"name": "Night",
-		"sun_pitch": -35.0,
-		"sun_yaw": 120.0,
-		"sun_color": Color(0.48, 0.61, 0.82),
-		"sun_energy": 0.45,
-		"sky_top": Color(0.02, 0.04, 0.09),
-		"sky_horizon": Color(0.05, 0.11, 0.20),
-		"ground_horizon": Color(0.02, 0.04, 0.07),
-		"ambient_energy": 0.22,
-		"fog_color": Color(0.04, 0.08, 0.14),
-		"fog_density": 0.0035,
-		"led_boost": 3.4,
-	},
-]
+const DayNightCycleScript := preload("res://world/day_night_cycle.gd")
+
+var _day_cycle := DayNightCycleScript.new()
 
 var _sun: DirectionalLight3D = null
 var _world_env: WorldEnvironment = null
@@ -82,7 +40,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_bayfront_world()
 	_build_player_rig()
-	_apply_tod(0)
+	_apply_day_night_sample()
 
 	var eb := get_node_or_null("/root/EventBus") as EventBusScript
 	if eb != null:
@@ -91,6 +49,10 @@ func _ready() -> void:
 
 	var st := get_node_or_null("/root/Settings") as SettingsScript
 	_on_quality_changed(st.get_preset_name() if st != null else "MEDIUM")
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--time-hours="):
+			_day_cycle.set_hours(arg.trim_prefix("--time-hours=").to_float())
+			_apply_day_night_sample()
 
 
 func _build_environment() -> void:
@@ -348,6 +310,8 @@ func _build_player_rig() -> void:
 
 
 func _process(delta: float) -> void:
+	if _day_cycle.advance(delta):
+		_apply_day_night_sample()
 	_light_update_elapsed += delta
 	if _light_update_elapsed >= 0.5:
 		_light_update_elapsed = 0.0
@@ -364,35 +328,37 @@ func _physics_process(_delta: float) -> void:
 
 func _on_touch_action(action_name: String) -> void:
 	if action_name == "cycle_tod":
-		_tod_index = (_tod_index + 1) % _tod_presets.size()
-		_apply_tod(_tod_index)
+		_day_cycle.jump_to_next_phase()
+		_apply_day_night_sample()
+		var eb := get_node_or_null("/root/EventBus") as EventBusScript
+		if eb != null:
+			eb.hud_message_requested.emit("TIME %s · %s" % [_day_cycle.get_clock_text(), _day_cycle.get_phase_name().to_upper()])
 
 
-func _apply_tod(idx: int) -> void:
-	var preset: Dictionary = _tod_presets[idx]
-	var tod_name: String = preset["name"]
-	var pitch: float = preset["sun_pitch"]
-	var yaw: float = preset["sun_yaw"]
-
+func _apply_day_night_sample() -> void:
+	var sample: Dictionary = _day_cycle.sample()
 	if _sun != null:
-		_sun.rotation_degrees = Vector3(pitch, yaw, 0.0)
-		_sun.light_color = preset["sun_color"]
-		_sun.light_energy = preset["sun_energy"]
+		_sun.rotation_degrees = Vector3(sample["light_pitch"], sample["light_yaw"], 0.0)
+		_sun.light_color = sample["light_color"]
+		_sun.light_energy = sample["light_energy"]
 
 	if _sky_mat != null:
-		_sky_mat.set_shader_parameter("sky_top_color", preset["sky_top"])
-		_sky_mat.set_shader_parameter("sky_horizon_color", preset["sky_horizon"])
-		_sky_mat.set_shader_parameter("ground_horizon_color", preset["ground_horizon"])
-		_sky_mat.set_shader_parameter("sun_color", preset["sun_color"])
-		_sky_mat.set_shader_parameter("sun_direction", _sun.global_basis.z.normalized())
-		_sky_mat.set_shader_parameter("night_factor", 1.0 if tod_name == "Night" else (0.35 if tod_name == "Blue" else 0.0))
+		_sky_mat.set_shader_parameter("sky_top_color", sample["sky_top"])
+		_sky_mat.set_shader_parameter("sky_horizon_color", sample["sky_horizon"])
+		_sky_mat.set_shader_parameter("ground_horizon_color", sample["ground_horizon"])
+		_sky_mat.set_shader_parameter("sun_color", sample["sun_color"])
+		_sky_mat.set_shader_parameter("sun_direction", sample["sun_direction"])
+		_sky_mat.set_shader_parameter("moon_direction", sample["moon_direction"])
+		_sky_mat.set_shader_parameter("moon_strength", sample["moon_strength"])
+		_sky_mat.set_shader_parameter("night_factor", sample["night_factor"])
+		_sky_mat.set_shader_parameter("cloud_offset", sample["cloud_offset"])
 
 	if _world_env != null and _world_env.environment != null:
-		_world_env.environment.ambient_light_energy = preset["ambient_energy"]
-		_world_env.environment.fog_light_color = preset["fog_color"]
-		_world_env.environment.fog_density = preset["fog_density"]
+		_world_env.environment.ambient_light_energy = sample["ambient_energy"]
+		_world_env.environment.fog_light_color = sample["fog_color"]
+		_world_env.environment.fog_density = sample["fog_density"]
 
-	var led_boost: float = preset["led_boost"]
+	var led_boost: float = sample["led_boost"]
 	for mat: StandardMaterial3D in _led_materials:
 		mat.emission_energy_multiplier = led_boost
 	for light: OmniLight3D in _street_lights:
@@ -400,10 +366,10 @@ func _apply_tod(idx: int) -> void:
 
 	var gs := get_node_or_null("/root/GameState") as GameStateScript
 	if gs != null:
-		gs.set_time_of_day_phase(tod_name)
+		gs.set_time_of_day(sample["phase"], sample["hours"])
 	var eb := get_node_or_null("/root/EventBus") as EventBusScript
 	if eb != null:
-		eb.time_of_day_changed.emit(tod_name, -pitch)
+		eb.time_of_day_changed.emit(sample["phase"], sample["sun_elevation"])
 
 
 func _on_quality_changed(preset_name: String) -> void:
@@ -412,6 +378,7 @@ func _on_quality_changed(preset_name: String) -> void:
 	var st := get_node_or_null("/root/Settings") as SettingsScript
 	if st == null:
 		return
+	_day_cycle.set_quality_tier(st.shader_tier)
 	match preset_name:
 		"LOW":
 			_sun.shadow_enabled = false
@@ -478,4 +445,7 @@ func get_optimization_stats() -> Dictionary:
 		"water_subdivisions": Vector2i(_water_mesh.subdivide_width, _water_mesh.subdivide_depth) if _water_mesh != null else Vector2i.ZERO,
 		"shadows_enabled": _sun.shadow_enabled if _sun != null else false,
 		"probe_enabled": _probe.visible if _probe != null else false,
+		"time_hours": _day_cycle.hours,
+		"time_clock": _day_cycle.get_clock_text(),
+		"sky_update_interval": _day_cycle.update_interval,
 	}

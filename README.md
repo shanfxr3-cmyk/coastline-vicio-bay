@@ -1,18 +1,20 @@
 # Coastline: Vicio Bay
 
-Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 and Phase 1 functionality are approved on a physical phone. Phase 2 is in progress with a major low-end optimisation pass and an original procedural sky foundation; the phone's 7–10 FPS regression remains under active verification (`docs/BUGS.md`, `B-006`).
+Original Godot 4 open-world crime game for Android arm64/Vulkan. Phase 0 and Phase 1 are phone-approved. The entry-level reference phone sustains LOW at 30 FPS (`B-006` resolved). Phase 2 now includes GPU/RAM device classification, automatic preset fallback, and a continuous 24-hour atmosphere; weather and richer clouds remain in progress.
 
 ## Reproduce the toolchain
 
 ```bash
 bash tools/setup_codespace.sh
 bash tools/validate.sh
-bash tools/screenshot.sh mobile tests/screenshots/phase2_low.png 1280x720 30 low
-bash tools/screenshot.sh mobile tests/screenshots/phase2_high.png 1280x720 30 high
-bash tools/screenshot.sh forward_plus tests/screenshots/phase2_ultra.png 1280x720 30 high
+bash tools/screenshot.sh mobile tests/screenshots/phase2_low.png 1280x720 30 low 16.75
+bash tools/screenshot.sh mobile tests/screenshots/phase2_high.png 1280x720 30 high 16.75
+bash tools/screenshot.sh mobile tests/screenshots/phase2_high_night.png 1280x720 30 high 0.0
+bash tools/screenshot.sh forward_plus tests/screenshots/phase2_ultra.png 1280x720 30 high 16.75
+bash tools/profile_rendering.sh /tmp/opencode/coastline-render-costs.json 30 mobile
 ```
 
-The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Seven-stage validation checks repository hygiene, the asset manifest, all 16 GDScript files, a headless boot of all seven autoloads and the main scene, eight character/camera physics regressions, and the Phase 2 preset/batching/collider performance suite. Screenshot quality arguments are optional; omitting one uses automatic detection.
+The project uses Godot 4.7.2, JDK 17, Android SDK 36, and built-in Jolt physics. Eight-stage validation checks repository hygiene, the asset manifest, all 19 GDScript files, a headless boot of all seven autoloads and the main scene, eight character/camera physics regressions, GPU/RAM presets/fallback/uncap checks, and the continuous-atmosphere suite. Screenshot quality/time arguments are optional; omitting them uses automatic detection and the continuous clock.
 
 ## Build Android artifacts
 
@@ -27,6 +29,16 @@ bash tools/build_android.sh standard aab build/coastline-vicio-bay.aab
 - Builds are arm64-only, with min SDK 24 and target SDK 36.
 - Without release credentials, artifacts are explicitly debug-signed for testing and are not Play Store releases.
 
+## Device-class presets
+
+| Preset | Intended device class | Target | Automatic behavior |
+|---|---|---:|---|
+| **LOW · ENTRY** | Entry-level, including the 6 GB reference phone | 30 FPS | Default on unknown GPUs and devices below 7 usable GiB |
+| **MED · MID-RANGE** | Mid-range | 30 FPS | Falls to LOW after a ten-second average below 20 FPS |
+| **HIGH · UPPER-MID** | Upper-mid | 60 FPS | Falls to MEDIUM after a ten-second average below 20 FPS |
+
+Auto-detection uses GPU family/model and usable physical RAM, never CPU cores. Fallback saves the sustainable preset and shows a short HUD notice. Do not tune MEDIUM/HIGH from the entry-level phone.
+
 For a locally signed release AAB, provide `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_ALIAS`, and `RELEASE_KEYSTORE_PASSWORD`, then run the AAB command. The script restores all temporary project/export-setting changes on exit.
 
 ## Controls
@@ -39,6 +51,9 @@ For a locally signed release AAB, provide `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYS
 | Crouch / stand | **CROUCH** | C | B |
 | Jump / vault | **JUMP** / **VAULT** | Space | A |
 | Switch protagonist | **KIAN / SERA** | Tab | Y |
+| Jump TOD phase | **TOD** | — | — |
+| Toggle telemetry | **DBG** | F3 | — |
+| Uncap/restore FPS + V-Sync | DBG panel **FPS CAP** button | F4 | — |
 
 ## Install and test on a phone
 
@@ -47,10 +62,11 @@ For a locally signed release AAB, provide `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYS
 3. Launch **Coastline: Vicio Bay** and verify the lit Bayfront scene and articulated protagonist.
 4. Test the left stick, right-side camera drag, **SPRINT**, **CROUCH**, and **JUMP**. Walk toward the low practice barrier and tap **VAULT** when it appears.
 5. Tap **KIAN / SERA** to switch protagonists. Walk toward a wall while orbiting to confirm the camera pulls in without clipping.
-6. Tap **TOD**, **QUAL**, and **DBG** to verify lighting presets, quality switching, and telemetry. Compare LOW, MEDIUM, and HIGH for at least 30 seconds each; the adaptive scale begins after warm-up. Record the on-screen FPS, draw calls, actual 3D resolution, and GPU name.
-7. Start with LOW on the 6 GB test phone. On a flagship Vulkan phone, also repeat the launch/control check with `coastline-ultra-apk`.
+6. Tap **TOD** to jump between dawn/day/golden/blue/night while the 24-hour clock continues. Tap **QUAL** to verify class labels and fallback notices, and **DBG** for telemetry.
+7. Start with LOW on the 6 GB entry phone and confirm it remains at 30 FPS. In the DBG panel, tap **FPS CAP** to measure uncapped LOW headroom; tap again to restore the 30 FPS cap and previous V-Sync mode.
+8. MEDIUM/HIGH are not tuning targets on the entry phone. If their ten-second average remains below 20 FPS, confirm the one-preset fallback message. On a flagship Vulkan phone, also test `coastline-ultra-apk`.
 
-Report launch failures, black screens, touch problems, clipping, visual regressions, and per-preset FPS for version `0.3.0-p2`. Phase 1 functionality is approved, but performance sign-off remains open as `B-006`. Lavapipe screenshots are relative regression checks, not phone benchmarks.
+Report launch failures, black screens, touch problems, clipping, visual regressions, and per-preset FPS for version `0.4.0-p2`. The original `B-006` LOW regression is resolved; any new LOW cycle regression needs fresh device evidence. Lavapipe screenshots/profiles are relative checks, not phone benchmarks.
 
 ## Configure CI release signing
 

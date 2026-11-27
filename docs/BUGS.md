@@ -4,14 +4,6 @@ Track all discovered bugs here with severity (`P0` blocker, `P1` major, `P2` min
 
 ## Open Bugs
 
-### `B-006` — P0 — Phase 1 runs at 7–10 FPS on the accepted test phone
-- **Device:** POCO M6 Pro 5G, 6 GB RAM, STANDARD release APK version `0.2.0-p1`.
-- **Observed:** User explicitly approved Phase 1 functionality on 2026-11-25 but measured approximately 7–10 FPS on LOW, MEDIUM, and HIGH. This blocks performance acceptance despite successful launch/controls.
-- **Root causes found:** Android auto-detection selected HIGH from an eight-core CPU; explicit preset application and initial autoload application used different paths; requested shadow-atlas sizes were stored but never sent to the rendering server; immutable scenery, water, palms, roads, and shader effects were not tiered aggressively enough.
-- **Implemented candidate fix:** Real per-preset application, conservative Android LOW default, lower 3D resolutions, reduced geometry/draw calls through 42 spatial MultiMesh batches, tiered lights/shadows/probes/fog/glow/water/clouds, optional adaptive 3D scale, and expanded performance telemetry/tests.
-- **Relative verification:** Lavapipe LOW improved from 4 to 15 FPS (153→60 calls; 15,474→6,230 triangles), and HIGH from 2 to 3 FPS (187→106 calls; 45,292→17,738 triangles). These software-Vulkan results do not prove a phone frame rate.
-- **Next:** User must compare `0.3.0-p2` LOW/MEDIUM/HIGH on the same phone and report FPS, draw calls, actual 3D resolution, and visual defects from **DBG**. Keep open until measured device improvement is confirmed.
-
 ### `B-003` — P2 — ReflectionProbe textures reported at screenshot shutdown
 - **Repro:** Run `bash tools/screenshot.sh mobile tests/screenshots/phase1_standard.png 1280x720 20` with Lavapipe.
 - **Observed:** The PNG saves successfully and exits zero, then Godot reports `WARNING: 7 RIDs of type "Texture" were leaked.` STANDARD and ULTRA behave identically.
@@ -20,6 +12,14 @@ Track all discovered bugs here with severity (`P0` blocker, `P1` major, `P2` min
 - **Next:** Check physical-device logs during the `0.3.0-p2` retest and reassess after a Godot patch upgrade. Do not silently remove reflections from tiers that advertise them.
 
 ## Resolved Bugs
+
+### `B-006` — P0 — Phase 1 runs at 7–10 FPS on the accepted test phone
+- **Device class:** POCO M6 Pro 5G/6 GB is the project's entry-level physical test device.
+- **Original report:** Version `0.2.0-p1` measured approximately 7–10 FPS on LOW, MEDIUM, and HIGH despite functional Phase 1 approval.
+- **Fix:** `27e5e08` applied real preset/shadow settings, conservative defaults, spatial MultiMesh batching, lower pixel/geometry cost, tiered lighting/effects, adaptive resolution, and expanded telemetry/tests.
+- **Physical verification:** Version `0.3.0-p2` measured **LOW 30 FPS**, MEDIUM 15 FPS, HIGH 10 FPS on the same phone. LOW now meets its entry-level 30 FPS target; the original all-preset regression is resolved.
+- **Device-class rule:** Do not tune MEDIUM/HIGH on this entry device. MEDIUM targets 30 FPS on mid-range hardware and HIGH targets 60 FPS on upper-mid hardware. GPU/RAM detection and automatic HIGH→MEDIUM→LOW fallback protect unsupported devices in `0.4.0-p2`.
+- **Follow-up:** Recheck LOW 30 FPS after the continuous atmosphere update and verify fallback/uncapped controls on the entry phone. Any new LOW regression gets a new bug rather than reopening the resolved Phase 1 report.
 
 ### `B-001` — P0 — Sequential Android exports contaminated the next build
 - **Repro:** Build STANDARD APK and then ULTRA APK in the same checkout (CI run `45354079765`).

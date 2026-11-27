@@ -2,6 +2,18 @@
 
 All notable changes to the project are documented in this file.
 
+## [Unreleased] — Phase 2 (Device Classes & 24-Hour Cycle)
+- Physical entry-level verification on POCO M6 Pro 5G/6 GB: `0.3.0-p2` reached LOW 30 FPS, MEDIUM 15 FPS, HIGH 10 FPS. LOW meets target and `B-006` is resolved; MEDIUM/HIGH are not tuned on this phone.
+- Re-labelled LOW as entry-level/30 FPS, MEDIUM as mid-range/30 FPS, and HIGH as upper-mid/60 FPS in the HUD and documentation.
+- Replaced CPU-core detection with conservative GPU-family/model + usable-RAM classification; unknown GPUs and roughly 6 GB devices default to LOW.
+- Added a ten-second average-FPS monitor: below 20 FPS on MEDIUM/HIGH drops one preset, saves the sustainable ceiling, and shows a short HUD message.
+- Added a DBG FPS-cap button and F4 shortcut that remove the engine cap and request V-Sync off for LOW headroom testing; recapping restores both.
+- Added isolated rendered profiling (`tools/profile_rendering.sh`) for resolution, shadows, water, reflections, and AA. Final stable Lavapipe ranking: resolution > reflections > FXAA > water > shadows.
+- Added a continuous 24-minute/24-hour cycle with interpolated dawn/day/golden/blue/night lighting, solar/lunar direction and energy, moon disk/glow, moving cloud offsets, TOD phase jumps, and deterministic `--time-hours` captures.
+- Bounded atmosphere updates to 4.0/1.0/0.25 seconds on LOW/MEDIUM/HIGH; local LOW still renders at 15 FPS after the cycle implementation.
+- Added GPU/RAM, fallback, uncap, full-day wrap, interpolation, sun/moon, cloud-motion, quality-interval, and scene-sync regression checks. Version advanced to `0.4.0-p2`/versionCode 3.
+- Sequential local STANDARD APK (`80296799` bytes), ULTRA APK (`80296827` bytes), and AAB (`28391261` bytes) passed signature/archive/content checks; AAB bundletool validation/conversion passed. HIGH golden/midnight and ULTRA captures passed integrity/nonblank checks; release CI is pending.
+
 ## [Unreleased] — Phase 2 (Optimisation & Atmosphere Foundation)
 - Recorded user Phase 1 device acceptance and the 7–10 FPS regression on a POCO M6 Pro 5G/6 GB (`B-006`); performance acceptance remains pending.
 - Reworked LOW/MEDIUM/HIGH budgets and made them authoritative during both automatic detection and manual changes; Android STANDARD now defaults to LOW.

@@ -59,13 +59,16 @@ jobs:
         run: bash tools/validate.sh
 
       - name: Render Phase 2 LOW screenshot (Standard / Mobile)
-        run: bash tools/screenshot.sh mobile tests/screenshots/phase2_low.png 1280x720 30 low
+        run: bash tools/screenshot.sh mobile tests/screenshots/phase2_low.png 1280x720 30 low 16.75
 
-      - name: Render Phase 2 HIGH screenshot (Standard / Mobile)
-        run: bash tools/screenshot.sh mobile tests/screenshots/phase2_high.png 1280x720 30 high
+      - name: Render Phase 2 HIGH golden screenshot (Standard / Mobile)
+        run: bash tools/screenshot.sh mobile tests/screenshots/phase2_high.png 1280x720 30 high 16.75
+
+      - name: Render Phase 2 HIGH midnight screenshot (Standard / Mobile)
+        run: bash tools/screenshot.sh mobile tests/screenshots/phase2_high_night.png 1280x720 30 high 0.0
 
       - name: Render Phase 2 HIGH screenshot (Ultra / Forward+)
-        run: bash tools/screenshot.sh forward_plus tests/screenshots/phase2_ultra.png 1280x720 30 high
+        run: bash tools/screenshot.sh forward_plus tests/screenshots/phase2_ultra.png 1280x720 30 high 16.75
 
       - name: Upload validation screenshots
         uses: actions/upload-artifact@v4

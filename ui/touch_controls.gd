@@ -27,6 +27,8 @@ var _crouch_button: Button = null
 var _jump_button: Button = null
 var _district_label: Label = null
 var _status_label: Label = null
+var _notice_label: Label = null
+var _notice_tween: Tween = null
 var _protagonist_name: String = "KIAN"
 var _state_name: String = "IDLE"
 
@@ -57,6 +59,7 @@ func _ready() -> void:
 		eb.sprint_lock_changed.connect(_on_sprint_lock_changed)
 		eb.crouch_changed.connect(_on_crouch_changed)
 		eb.protagonist_changed.connect(_on_protagonist_changed)
+		eb.hud_message_requested.connect(_show_notice)
 
 
 func _update_stick_home() -> void:
@@ -95,7 +98,7 @@ func _build_hud() -> void:
 	top_bar.add_child(_tod_button)
 
 	var st := _settings()
-	_quality_button = _make_pill_button("QUAL: %s" % (st.get_preset_name() if st != null else "MEDIUM"))
+	_quality_button = _make_pill_button("QUAL: %s" % (st.get_preset_display_name() if st != null else "LOW · ENTRY · 30 FPS"))
 	_quality_button.pressed.connect(func() -> void:
 		var s := _settings()
 		if s != null:
@@ -123,6 +126,22 @@ func _build_hud() -> void:
 	_district_label.add_theme_font_size_override("font_size", 12)
 	_district_label.add_theme_color_override("font_color", Color(0.84, 0.93, 0.98, 0.85))
 	add_child(_district_label)
+
+	_notice_label = Label.new()
+	_notice_label.anchor_left = 0.5
+	_notice_label.anchor_right = 0.5
+	_notice_label.offset_left = -280.0
+	_notice_label.offset_right = 280.0
+	_notice_label.offset_top = 100.0
+	_notice_label.offset_bottom = 134.0
+	_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_notice_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_notice_label.add_theme_font_size_override("font_size", 16)
+	_notice_label.add_theme_color_override("font_color", Color(0.92, 0.98, 1.0))
+	_notice_label.add_theme_color_override("font_outline_color", Color(0.02, 0.05, 0.08))
+	_notice_label.add_theme_constant_override("outline_size", 7)
+	_notice_label.visible = false
+	add_child(_notice_label)
 
 	_sprint_button = _make_pill_button("SPRINT")
 	_sprint_button.anchor_top = 1.0
@@ -245,7 +264,8 @@ func _is_over_button(pos: Vector2) -> bool:
 	for btn: Button in [_switch_button, _tod_button, _quality_button, _debug_button, _sprint_button, _crouch_button, _jump_button]:
 		if btn != null and btn.visible and btn.get_global_rect().has_point(pos):
 			return true
-	return false
+	var debug_overlay := _dbg()
+	return debug_overlay != null and debug_overlay.is_point_over_controls(pos)
 
 
 func _update_stick(touch_pos: Vector2) -> void:
@@ -268,14 +288,31 @@ func _draw() -> void:
 	draw_arc(_stick_knob, STICK_KNOB_RADIUS, 0.0, TAU, 32, Color(1.0, 0.62, 0.24, 0.85), 2.0, true)
 
 
-func _on_quality_changed(preset_name: String) -> void:
+func _on_quality_changed(_preset_name: String) -> void:
 	if _quality_button != null:
-		_quality_button.text = "QUAL: %s" % preset_name
+		var st := _settings()
+		_quality_button.text = "QUAL: %s" % (st.get_preset_display_name() if st != null else "LOW · ENTRY · 30 FPS")
 
 
 func _on_tod_changed(phase_name: String, _elevation: float) -> void:
 	if _tod_button != null:
 		_tod_button.text = "TOD: %s" % phase_name.to_upper()
+
+
+func _show_notice(message: String) -> void:
+	if _notice_label == null:
+		return
+	if _notice_tween != null and _notice_tween.is_valid():
+		_notice_tween.kill()
+	_notice_label.text = message
+	_notice_label.modulate.a = 1.0
+	_notice_label.visible = true
+	_notice_tween = create_tween()
+	_notice_tween.tween_interval(2.4)
+	_notice_tween.tween_property(_notice_label, "modulate:a", 0.0, 0.6)
+	_notice_tween.tween_callback(func() -> void:
+		_notice_label.visible = false
+	)
 
 
 func _emit_action(action_name: String) -> void:

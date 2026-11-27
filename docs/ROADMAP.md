@@ -7,8 +7,8 @@
 | Phase | Name | Status | Target |
 |---|---|---|---|
 | **P0** | Build Pipeline, Skeleton, Touch Demo, CI (STANDARD / ULTRA / AAB) | `COMPLETE` | Phone accepted + release-signed CI verified |
-| **P1** | Character Controller, Camera, Touch Controls | `COMPLETE — DEVICE PERFORMANCE FOLLOW-UP` | User-approved on 2026-11-25; 7–10 FPS regression tracked as `B-006` |
-| **P2** | Sky, Clouds, Weather, Time of Day, Lighting | `IN PROGRESS` | Optimisation + procedural sky foundation done; cycle, clouds, weather remain |
+| **P1** | Character Controller, Camera, Touch Controls | `COMPLETE` | User-approved; entry-level LOW verified at 30 FPS (`B-006` resolved) |
+| **P2** | Sky, Clouds, Weather, Time of Day, Lighting | `IN PROGRESS` | 24-hour cycle complete; weather and richer clouds remain |
 | **P3** | District 1 (Bayfront / Palm Row), Road System, Chunk Streaming | `PENDING` | 128m threaded streaming chunks + roads |
 | **P4** | Supercars, Traffic, Driving Feel | `PENDING` | Raycast RigidBody3D physics + hero cars |
 | **P5** | Weapons, Combat, Ragdoll, Destruction | `PENDING` | Ballistics, PhysicalBoneSimulator3D, breakables |
@@ -95,18 +95,44 @@
 
 ### Checklist
 - [x] `P2.1` Record Phase 1 device acceptance and diagnose `B-006`: requested quality was not consistently applied, Android auto-detection selected HIGH from CPU cores, shadow atlases were not applied, and unbatched geometry/per-pixel effects dominated the software baseline
-- [x] `P2.2` Rebuild LOW/MEDIUM/HIGH budgets: 0.50/0.70/0.85 base scale, 30/45/60 FPS caps, real 512/1024/2048 shadow atlases, tiered lights/fog/glow/probes/AA/water/detail, and conservative STANDARD Android auto-detection
+- [x] `P2.2` Rebuild LOW/MEDIUM/HIGH budgets: 0.50/0.70/0.85 base scale, 30/30/60 FPS caps, real 512/1024/2048 shadow atlases, tiered lights/fog/glow/probes/AA/water/detail, and conservative STANDARD Android auto-detection
 - [x] `P2.3` Batch immutable scenery into spatial MultiMeshes while retaining every independent collider; budget 163 instances into 42 batches and preserve vault/player regression tests
 - [x] `P2.4` Add deterministic preset CLI selection, actual render-scale telemetry, and a structural performance suite to all seven validation stages
 - [x] `P2.5` Add original quarter-resolution procedural sky/cloud/sun/star shading with tiered radiance and no time-driven reflection rebuild loop
 - [x] `P2.6` Render final LOW/HIGH STANDARD and HIGH ULTRA screenshots under Lavapipe; LOW improved from 4 to 15 FPS and HIGH from 2 to 3 FPS at 1280×720. These are software-render comparisons, not phone FPS claims
 - [x] `P2.7` Built version `0.3.0-p2`/versionCode 2 as STANDARD, ULTRA, and AAB; green release CI run `45742203868` and downloaded-artifact verification passed
-- [ ] `P2.8` Obtain physical-phone LOW/MEDIUM/HIGH FPS and visual results; iterate until the performance defect has measured improvement
-- [ ] `P2.9` Full continuous 24-hour sun/moon cycle with renderer-aware atmospheric lighting and smooth phase interpolation
+- [x] `P2.8` Entry-level physical results: LOW 30 FPS, MEDIUM 15 FPS, HIGH 10 FPS on POCO M6 Pro 5G/6 GB; LOW target met, `B-006` resolved, and MEDIUM/HIGH are explicitly not tuned on this phone
+- [x] `P2.9` Continuous 24-minute/24-hour sun/moon cycle with interpolated atmosphere, moving cloud offsets, TOD phase jumps, deterministic time captures, and 4.0/1.0/0.25-second LOW/MEDIUM/HIGH radiance intervals
 - [ ] `P2.10` Layered volumetric cloud raymarch, scattering/silver lining, aerial perspective, and quality fallbacks beyond the current procedural cloud foundation
 - [ ] `P2.11` Rain, storms, wetness/puddles/ripples, wind, lightning, fog, heat haze, and per-weather grading
+- [x] `P2.12` GPU-name + usable-RAM detection, entry/mid/upper-mid UI labels, 30/30/60 targets, ten-second sub-20-FPS fallback with HUD notice, and DBG FPS/V-Sync uncap control
+- [x] `P2.13` Measure isolated LOW→MEDIUM costs in `tools/profile_rendering.sh`: resolution > reflections > FXAA > water > shadows on the final stable Lavapipe run; document environment-specific results
+- [ ] `P2.14` Build `0.4.0-p2`/versionCode 3, run all validation/Android/CI checks, and publish HIGH golden/midnight CI captures
+- [ ] `P2.15` Physical entry-phone regression: LOW must remain 30 FPS after the cycle; verify automatic fallback notice and uncapped LOW headroom
 
 ### Current Performance Evidence
+
+**Physical entry-level device — `0.3.0-p2`:**
+| Preset | Device class | Target | Measured on POCO M6 Pro 5G/6 GB | Decision |
+|---|---|---:|---:|---|
+| LOW | Entry-level | 30 FPS | **30 FPS** | Default and protected baseline |
+| MEDIUM | Mid-range | 30 FPS | 15 FPS | Do not tune on entry hardware; auto-fall back to LOW |
+| HIGH | Upper-mid | 60 FPS | 10 FPS | Do not tune on entry hardware; auto-fall back one preset |
+
+**Isolated LOW→MEDIUM costs — Lavapipe, 1280×720, 30 frames/case:**
+| Case | FPS | Frame time | Relative result |
+|---|---:|---:|---|
+| LOW baseline | 19.98 | 50.04 ms | 62 calls, 0.50 scale |
+| + MEDIUM resolution 0.70 | 12.38 | 80.78 ms | Largest isolated cost (+30.74 ms) |
+| + MEDIUM reflections | 13.13 | 76.18 ms | Second-largest isolated cost (+26.14 ms) |
+| + MEDIUM FXAA | 16.12 | 62.05 ms | Third-largest isolated cost (+12.01 ms) |
+| + MEDIUM water | 16.29 | 61.37 ms | Fourth-largest isolated cost (+11.33 ms) |
+| + MEDIUM two-split shadows | 16.80 | 59.51 ms | 107 calls; smallest isolated cost (+9.47 ms) |
+| Full MEDIUM | 5.46 | 183.17 ms | 109 calls; also adds fog, two lights, sky/detail/radiance; costs are not additive |
+| LOW repeat | 19.74 | 50.66 ms | Stable repeated baseline; lower tiers remain close and environment-dependent |
+
+These are actual isolated software-Vulkan measurements, not phone GPU costs. The phone establishes only the physical preset FPS above.
+
 | Capture | FPS | Draw calls | Triangles | Actual 3D scale | Shadow atlas |
 |---|---:|---:|---:|---:|---:|
 | Phase 1 LOW baseline | 4 | 153 | 15,474 | 0.670 | 1024 (requested; not applied) |
@@ -117,10 +143,11 @@
 
 - Final local PNGs passed integrity, 1280×720 dimension, and nonblank pixel-statistic checks. Fresh image viewing remains unavailable; CI must repeat all three captures.
 - Sequential local Android builds passed: STANDARD APK `80285766` bytes, ULTRA APK `80285790` bytes, and AAB `28380094` bytes. Both debug APKs passed v2 signature checks and report versionCode 2/version `0.3.0-p2`; all archives passed CRC/content checks. The debug AAB passed bundletool validation and universal-APK generation.
+- **`0.4.0-p2` local candidate:** Sequential STANDARD APK (`80296799` bytes), ULTRA APK (`80296827` bytes), and AAB (`28391261` bytes) passed signature/archive/content checks; the debug AAB passed bundletool validation and universal-APK generation. LOW cycle capture remained 15 FPS/62 calls; HIGH golden, HIGH midnight, and ULTRA golden captures passed PNG/nonblank checks. Release CI remains `P2.14`.
 - **Release CI:** [run `45742203868`](https://github.com/shanfxr3-cmyk/coastline-vicio-bay/actions/runs/45742203868), commit `27e5e08`, passed validation, all three captures, and release-signed builds. Downloaded STANDARD APK (`74659765` bytes) and ULTRA APK (`74659781` bytes) passed v2 verification with release-certificate SHA-256 `1d1b4c635840b12661d329de119e37691939107ae9750f50935bf7fde55c293b`; AAB (`26630305` bytes) passed JAR/ZIP verification, bundletool validation, and universal-APK generation. All archives exclude tooling/tests, and all CI PNGs passed integrity/dimension/nonblank checks.
-- Phase 2 is not complete: its first milestone is an optimized, testable atmosphere foundation. Weather and a continuous time cycle are not represented as shipped.
+- Phase 2 remains in progress: the `0.4.0-p2` candidate adds the continuous cycle, but weather and richer volumetric clouds are not shipped. Local cycle captures pass PNG/nonblank checks; this model cannot view image input, so the user must judge the linked HIGH images.
 
 ### Resume Steps After Interruption
-1. Ask the user to install STANDARD from run `45742203868` (or the latest green documentation run), compare LOW first on `0.3.0-p2`, and report the on-screen FPS/draw calls/resolution from **DBG**.
-2. If LOW remains near 10 FPS, profile GPU versus CPU on the physical device before adding further effects; do not claim `B-006` fixed from Lavapipe numbers.
-3. After measurable device improvement, continue the remaining P2 atmosphere/weather items in order.
+1. Finish `P2.14`, then install the latest green `0.4.0-p2` STANDARD artifact on the entry phone. Verify LOW remains 30 FPS, HIGH/MEDIUM fallback notices appear after ten-second sub-20-FPS windows, and the DBG FPS-cap button reveals LOW headroom.
+2. Do not tune MEDIUM or HIGH on the entry phone. If LOW falls below 30 FPS, open a new regression and reduce only cycle/update costs before adding weather.
+3. After LOW remains verified, implement `P2.11` as the next single milestone with a cheap LOW weather tier; then continue `P2.10` richer clouds only on MEDIUM/HIGH/ULTRA.

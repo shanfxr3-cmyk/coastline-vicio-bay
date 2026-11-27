@@ -11,6 +11,7 @@ const StreamingScript := preload("res://world/streaming.gd")
 var overlay_visible: bool = true
 var _panel: PanelContainer = null
 var _label: Label = null
+var _fps_cap_button: Button = null
 var _update_accum: float = 0.0
 
 var _screenshot_path: String = ""
@@ -43,7 +44,7 @@ func _build_ui() -> void:
 	_panel = PanelContainer.new()
 	_panel.name = "DebugTelemetryPanel"
 	_panel.position = Vector2(14.0, 14.0)
-	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.03, 0.07, 0.11, 0.72)
@@ -56,11 +57,29 @@ func _build_ui() -> void:
 	style.content_margin_bottom = 8
 	_panel.add_theme_stylebox_override("panel", style)
 
+	var content := VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", 6)
+	_panel.add_child(content)
+
 	_label = Label.new()
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 13)
 	_label.add_theme_color_override("font_color", Color(0.92, 0.97, 1.0, 1.0))
-	_panel.add_child(_label)
+	content.add_child(_label)
+
+	_fps_cap_button = Button.new()
+	_fps_cap_button.focus_mode = Control.FOCUS_NONE
+	_fps_cap_button.custom_minimum_size = Vector2(220.0, 34.0)
+	_fps_cap_button.add_theme_font_size_override("font_size", 13)
+	_fps_cap_button.tooltip_text = "Toggle the engine FPS cap and V-Sync for headroom testing (F4)"
+	_fps_cap_button.pressed.connect(func() -> void:
+		var st := get_node_or_null("/root/Settings") as SettingsScript
+		if st != null:
+			st.toggle_fps_uncapped()
+	)
+	content.add_child(_fps_cap_button)
+
 	add_child(_panel)
 	_refresh_text()
 
@@ -68,8 +87,17 @@ func _build_ui() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var key_ev := event as InputEventKey
-		if key_ev.pressed and not key_ev.echo and key_ev.keycode == KEY_F3:
-			toggle_overlay()
+		if key_ev.pressed and not key_ev.echo:
+			if key_ev.keycode == KEY_F3:
+				toggle_overlay()
+			elif key_ev.keycode == KEY_F4:
+				var st := get_node_or_null("/root/Settings") as SettingsScript
+				if st != null:
+					st.toggle_fps_uncapped()
+
+
+func is_point_over_controls(pos: Vector2) -> bool:
+	return overlay_visible and _fps_cap_button != null and _fps_cap_button.get_global_rect().has_point(pos)
 
 
 func toggle_overlay() -> void:
@@ -104,6 +132,7 @@ func _refresh_text() -> void:
 	var tris: int = int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
 	var vram_mb: float = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / (1024.0 * 1024.0)
 	var ram_mb: float = OS.get_static_memory_usage() / (1024.0 * 1024.0)
+	var device_ram_mb: float = float(OS.get_memory_info().get("physical", 0)) / (1024.0 * 1024.0)
 	var phys_objs: int = int(Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS))
 	var phys_engine: String = str(ProjectSettings.get_setting("physics/3d/physics_engine", "Default"))
 
@@ -113,6 +142,7 @@ func _refresh_text() -> void:
 
 	var title: String = gs.GAME_TITLE if gs != null else "Coastline: Vicio Bay"
 	var tod: String = gs.time_of_day_phase if gs != null else "Golden"
+	var clock: String = gs.get_clock_text() if gs != null else "16:45"
 	var tier: String = st.build_tier if st != null else "STANDARD"
 	var method: String = st.renderer_method if st != null else "mobile"
 	var preset: String = st.get_preset_name() if st != null else "MEDIUM"
@@ -129,9 +159,9 @@ func _refresh_text() -> void:
 		"%s  [%s | %s | %s x%.2f]\n"
 		+ "FPS: %.1f (%.2f ms)  |  Calls: %d  |  Tris: %d\n"
 		+ "3D: %dx%d  |  MSAA: %d  |  GPU: %s\n"
-		+ "VRAM: %.1f MB  |  RAM: %.1f MB\n"
+		+ "VRAM: %.1f MB  |  RAM: %.1f / %.0f MB\n"
 		+ "Stream: chunk (%d,%d) loaded=%d queue=%d\n"
-		+ "Physics (%s): active=%d  |  TOD: %s\n"
+		+ "Physics (%s): active=%d  |  TOD: %s %s\n"
 		+ "Hero: %s  |  State: %s"
 	) % [
 		title,
@@ -149,6 +179,7 @@ func _refresh_text() -> void:
 		gpu_name,
 		vram_mb,
 		ram_mb,
+		device_ram_mb,
 		chunk.x,
 		chunk.y,
 		loaded_c,
@@ -156,9 +187,12 @@ func _refresh_text() -> void:
 		phys_engine,
 		phys_objs,
 		tod,
+		clock,
 		gs.active_protagonist_id if gs != null else "kian",
 		gs.locomotion_state if gs != null else "IDLE",
 	]
+	if _fps_cap_button != null:
+		_fps_cap_button.text = "FPS: UNCAPPED · TAP TO CAP (F4)" if st != null and st.fps_uncapped else "FPS CAP: %d · TAP TO UNCAP (F4)" % (st.target_fps if st != null else 30)
 
 
 func _capture_and_quit() -> void:
